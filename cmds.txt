@@ -1,0 +1,4 @@
+sudo docker run --name=forum-db -e POSTGRES_PASSWORD="12345678" -p 5438:5432 -d --rm postgres
+
+
+psql postgresql://postgres:12345678@localhost:5438/postgres -f ./db_init.sql
