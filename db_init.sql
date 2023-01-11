@@ -35,7 +35,8 @@ create unlogged table posts (
     isedited boolean default false,
     forum citext constraint posts_forum_fk references forums(slug),
     thread integer,
-    created timestamp with time zone default CURRENT_TIMESTAMP
+    created timestamp with time zone default CURRENT_TIMESTAMP,
+    path integer[]
 );
 
 create unlogged table threads (
@@ -47,7 +48,7 @@ create unlogged table threads (
     author citext constraint threads_author_fk references users(nickname) not null,
     forum citext constraint threads_forum_fk references forums(slug) not null,
     message text not null,
-    slug citext not null unique
+    slug citext unique
 );
 
 create unlogged table votes (
@@ -79,6 +80,19 @@ $$ language 'plpgsql';
 
 create trigger trig_thread_added_count_threads
 after insert on threads for each row execute procedure func_after_thread_created_update_threads();
+
+--  Обновление количества постов на форуме при создании нового
+create or replace function func_after_post_created_update_forum_posts() returns trigger as $$
+begin
+    update forums set posts = posts + 1
+    where new.forum = slug;
+return null;
+end
+$$ language 'plpgsql';
+
+create trigger trig_post_added_count_posts
+after insert on posts for each row execute procedure func_after_post_created_update_forum_posts();
+
 
 
 -- Добавление пользователя к форуму при создании ветки
@@ -112,6 +126,46 @@ $$ language 'plpgsql';
 
 create trigger trig_thread_added_add_user_to_forum
 after insert on threads for each row execute procedure func_after_thread_created_add_user_to_forum();
+
+
+-- Обновление пути к посту
+create or replace function func_update_post_path()
+returns trigger as $$
+begin
+    new.path = (select path from posts where id=new.parent) || new.id;
+    return new;
+end
+$$ LANGUAGE plpgsql;
+
+create trigger trig_insert_post
+before insert on posts for each row execute procedure func_update_post_path();
+
+
+-- Обновление рейтинга thread после создания vote
+create or replace function func_update_thread_votes_after_insert()
+returns trigger as $$
+begin
+    update threads set votes = votes + new.voice where id = new.thread;
+    return new;
+end
+$$ language plpgsql;
+
+create trigger trig_after_insent_vote
+after insert on votes for each row execute procedure func_update_thread_votes_after_insert();
+
+-- Обновление рейтинга thread после изменения vote
+create or replace function func_update_thread_votes_after_update()
+returns trigger as $$
+begin
+    update threads set votes = votes + new.voice - old.voice where id = new.thread;
+    return new;
+end
+$$ language plpgsql;
+
+create trigger trig_after_update_vote
+after update on votes for each row execute procedure func_update_thread_votes_after_update();
+
+
 
 
 

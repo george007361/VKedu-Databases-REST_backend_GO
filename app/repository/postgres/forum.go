@@ -128,11 +128,11 @@ func (r *ForumPostgres) GetForumThreads(params models.ForumThreadsQueryParams) (
 	whereStatementStr := ""
 	orderStatementStr := ""
 
-	if params.Since != -1 {
+	if params.Since != "" {
 		if params.Desc {
-			whereStatementStr = " and extract(EPOCH from created)  <= $3 "
+			whereStatementStr = " and created <= $3 "
 		} else {
-			whereStatementStr = " and extract(EPOCH from created)  >= $3 "
+			whereStatementStr = " and created >= $3 "
 		}
 		queryParams = append(queryParams, params.Since)
 	}
@@ -191,11 +191,11 @@ func (r *ForumPostgres) CreateThreadInForum(newThreadData models.Thread) (models
 
 	threadQuery := fmt.Sprintf(`
 	insert into %s 
-    (title, author, message, forum, slug) 
-	values ($1,$2,$3,$4,$5) 
+    (title, author, message, forum, slug, created) 
+	values ($1,$2,$3,$4,nullif($5,''),$6) 
 	returning id, created, votes`, threadTable)
 
-	err = r.db.DB.QueryRow(threadQuery, newThreadData.Title, newThreadData.Author, newThreadData.Message, newThreadData.Forum, newThreadData.Slug).Scan(&newThreadData.ID, &newThreadData.Created, &newThreadData.Votes)
+	err = r.db.DB.QueryRow(threadQuery, newThreadData.Title, newThreadData.Author, newThreadData.Message, newThreadData.Forum, newThreadData.Slug, newThreadData.Created).Scan(&newThreadData.ID, &newThreadData.Created, &newThreadData.Votes)
 
 	if err != nil { // если такой форум уже еть
 		fmt.Println(err)

@@ -1,8 +1,11 @@
 package service
 
 import (
+	"net/http"
+
 	"github.com/george007361/db-course-proj/app/models"
 	"github.com/george007361/db-course-proj/app/repository"
+	"github.com/sirupsen/logrus"
 )
 
 type ForumService struct {
@@ -14,7 +17,17 @@ func NewForumService(repo repository.Forum) *ForumService {
 }
 
 func (s *ForumService) CreateForum(newForumData models.Forum) (models.Forum, models.Error) {
-	return s.repo.CreateForum(newForumData)
+	forumData, errCreate := s.repo.CreateForum(newForumData)
+	if errCreate.Code != http.StatusConflict {
+		return forumData, errCreate
+	}
+
+	forumData, errGet := s.repo.GetForumData(newForumData.Slug)
+	if errGet.Code != http.StatusOK {
+		return forumData, errGet
+	}
+	logrus.Println(forumData, errCreate, errGet)
+	return forumData, errCreate
 }
 
 func (s *ForumService) GetForumData(slug string) (models.Forum, models.Error) {
@@ -30,6 +43,7 @@ func (s *ForumService) GetForumThreads(params models.ForumThreadsQueryParams) ([
 }
 
 func (s *ForumService) CreateThreadInForum(newThreadData models.Thread) (models.Thread, models.Error) {
+	// TODO
 	return s.repo.CreateThreadInForum(newThreadData)
 }
 

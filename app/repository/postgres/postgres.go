@@ -21,6 +21,7 @@ const (
 	threadTable     = "threads"
 	forumUsersTable = "nickname_forum"
 	postTable       = "posts"
+	voteTable       = "votes"
 )
 
 func NewPostgresDB(conf Config) (*sqlx.DB, error) {

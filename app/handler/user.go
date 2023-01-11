@@ -18,7 +18,7 @@ func (h *Handler) userCreate(c *gin.Context) {
 		return
 	}
 
-	var newUserData models.User
+	var newUserData models.UserCreate
 	newUserData.Nickname = nickname
 
 	if err := c.BindJSON(&newUserData); err != nil {
@@ -26,13 +26,19 @@ func (h *Handler) userCreate(c *gin.Context) {
 		return
 	}
 
-	err := h.services.User.CreateUser(newUserData)
-	if err.Code != http.StatusCreated {
-		helpers.NewErrorResponse(c, err.Code, err.Message)
+	users, err := h.services.User.CreateUser(newUserData)
+	logrus.Println("HANDLER RES: ", users, err)
+	if err.Code == http.StatusConflict {
+		c.JSON(err.Code, users)
 		return
 	}
 
-	c.JSON(http.StatusCreated, newUserData)
+	if err.Code == http.StatusCreated {
+		c.JSON(err.Code, newUserData)
+		return
+	}
+
+	helpers.NewErrorResponse(c, err.Code, err.Message)
 }
 
 func (h *Handler) userGetProfile(c *gin.Context) {
@@ -64,20 +70,20 @@ func (h *Handler) userUpdateProfile(c *gin.Context) {
 		return
 	}
 
-	var userData models.User
-	userData.Nickname = nickname
+	var updatedData models.UserUpdate
+	updatedData.Nickname = nickname
 
-	if err := c.BindJSON(&userData); err != nil {
+	if err := c.BindJSON(&updatedData); err != nil {
 		helpers.NewErrorResponse(c, http.StatusBadRequest, "Invalid JSON: "+err.Error())
 		return
 	}
 
-	userUpdatedData, err := h.services.User.UpdateUserProfile(userData)
+	userData, err := h.services.User.UpdateUserProfile(updatedData)
 
 	if err.Code != http.StatusOK {
 		helpers.NewErrorResponse(c, err.Code, err.Message)
 		return
 	}
 
-	c.JSON(err.Code, userUpdatedData)
+	c.JSON(err.Code, userData)
 }

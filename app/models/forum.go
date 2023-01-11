@@ -18,6 +18,6 @@ type ForumUsersQueryParams struct {
 type ForumThreadsQueryParams struct {
 	Slug  string
 	Limit int
-	Since int
+	Since string
 	Desc  bool
 }

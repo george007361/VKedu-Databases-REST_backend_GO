@@ -20,16 +20,13 @@ func (h *Handler) forumCreate(c *gin.Context) {
 		return
 	}
 
-	logrus.Println(newForumData)
-
 	forumData, err := h.services.Forum.CreateForum(newForumData)
-	if err.Code != http.StatusCreated {
-		helpers.NewErrorResponse(c, err.Code, err.Message)
+	if err.Code == http.StatusCreated || err.Code == http.StatusConflict {
+		c.JSON(err.Code, forumData)
 		return
 	}
-	logrus.Println(forumData)
 
-	c.JSON(http.StatusCreated, forumData)
+	helpers.NewErrorResponse(c, err.Code, err.Message)
 }
 
 func (h *Handler) forumGetData(c *gin.Context) {
@@ -132,16 +129,7 @@ func (h *Handler) forumGetThreads(c *gin.Context) {
 		return
 	}
 
-	sinceStr, isExist := c.GetQuery("since")
-	if !isExist {
-		sinceStr = "-1"
-	}
-
-	since, err := strconv.Atoi(sinceStr)
-	if err != nil {
-		helpers.NewErrorResponse(c, http.StatusBadRequest, "Invalig query param since")
-		return
-	}
+	since, isExist := c.GetQuery("since")
 
 	descStr, isExist := c.GetQuery("desc")
 	if !isExist {

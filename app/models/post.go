@@ -8,18 +8,18 @@ type Post struct { //  Сообщение внутри ветки обсужде
 	Forum    string    `json:"forum"`                      // Идентификатор форума (slug) данного сообещния.
 	ID       int       `json:"id"`                         // Идентификатор данного сообщения.
 	Message  string    `json:"message" binding:"required"` // Собственно сообщение форума.
-	Parent   int       `json:"parent" binding:"required"`  // Идентификатор родительского сообщения (0 - корневое сообщение обсуждения).
+	Parent   int       `json:"parent"`                     // Идентификатор родительского сообщения (0 - корневое сообщение обсуждения).
 	IsEdited bool      `json:"isEdited"`                   // Истина, если данное сообщение было изменено.
 	Thread   int       `json:"thread"`                     // Идентификатор форума (slug) данного сообещния.
 }
 
 type PostUpdate struct {
-	Message string `json:"message"` // Собственно сообщение форума.
+	Message string `json:"message" binding:"required"` // Собственно сообщение форума.
 }
 
 type PostAllData struct {
-	Post   Post   `json:"post"`
-	Author User   `json:"author"`
-	Thread Thread `json:"thread"`
-	Forum  Forum  `json:"forum"`
+	Post   Post    `json:"post"`
+	Author *User   `json:"author,omitempty"`
+	Thread *Thread `json:"thread,omitempty"`
+	Forum  *Forum  `json:"forum,omitempty"`
 }

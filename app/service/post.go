@@ -16,3 +16,7 @@ func NewPostService(repo repository.Post) *PostService {
 func (s *PostService) GetPostData(id int) (models.Post, models.Error) {
 	return s.repo.GetPostData(id)
 }
+
+func (s *PostService) UpdatePostData(newData models.PostUpdate, id int) (models.Post, models.Error) {
+	return s.repo.UpdatePostData(newData, id)
+}

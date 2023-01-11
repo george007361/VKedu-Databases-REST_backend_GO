@@ -35,7 +35,7 @@ func (r *PostPostgres) GetPostData(id int) (models.Post, models.Error) {
 		&postData.Created)
 
 	if err != nil && err == sql.ErrNoRows {
-		return models.Post{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprint(`Post with id "%d" was not found`, id)}
+		return models.Post{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`Post with id "%d" was not found`, id)}
 	}
 
 	if err != nil && err != sql.ErrNoRows {
@@ -43,4 +43,32 @@ func (r *PostPostgres) GetPostData(id int) (models.Post, models.Error) {
 	}
 
 	return postData, models.Error{Code: http.StatusOK, Message: "Post Data get succ"}
+}
+
+func (r *PostPostgres) UpdatePostData(newData models.PostUpdate, id int) (models.Post, models.Error) {
+	query := fmt.Sprintf(`update %s
+						  set message=$1, isedited=true 
+						  where id=$2 
+						  returning id, parent, author, message, isedited, forum, thread, created`, postTable)
+
+	var postData models.Post
+	err := r.db.DB.QueryRow(query, newData.Message, id).Scan(
+		&postData.ID,
+		&postData.Parent,
+		&postData.Author,
+		&postData.Message,
+		&postData.IsEdited,
+		&postData.Forum,
+		&postData.Thread,
+		&postData.Created)
+
+	if err == sql.ErrNoRows {
+		return models.Post{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`Post with id="%d" not found`, id)}
+	}
+
+	if err != nil {
+		return models.Post{}, models.Error{Code: http.StatusInternalServerError, Message: err.Error()}
+	}
+
+	return postData, models.Error{Code: http.StatusOK, Message: "Post successfully updated"}
 }
