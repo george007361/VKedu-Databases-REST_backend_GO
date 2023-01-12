@@ -13,9 +13,15 @@ type Thread struct {
 	Votes   int       `json:"votes"`                      // Кол-во голосов непосредственно за данное сообщение форума.
 }
 
-type UpdateThread struct {
+type CreateThread struct {
+	Author  string `json:"author" binding:"required"`  // Пользователь, создавший данную тему.
 	Message string `json:"message" binding:"required"` // Описание ветки обсуждения.
 	Title   string `json:"title" binding:"required"`   // Заголовок ветки обсуждения.
+}
+
+type UpdateThread struct {
+	Message string `json:"message"` // Описание ветки обсуждения.
+	Title   string `json:"title"`   // Заголовок ветки обсуждения.
 }
 
 type Vote struct {

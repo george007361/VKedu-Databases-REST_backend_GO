@@ -41,16 +41,3 @@ func (s *ForumService) GetForumUsers(params models.ForumUsersQueryParams) ([]mod
 func (s *ForumService) GetForumThreads(params models.ForumThreadsQueryParams) ([]models.Thread, models.Error) {
 	return s.repo.GetForumThreads(params)
 }
-
-func (s *ForumService) CreateThreadInForum(newThreadData models.Thread) (models.Thread, models.Error) {
-	// TODO
-	return s.repo.CreateThreadInForum(newThreadData)
-}
-
-// func (s *UserService) GetUserProfile(nickname string) (models.User, models.Error) {
-// 	return s.repo.GetUserProfile(nickname)
-// }
-
-// func (s *UserService) UpdateUserProfile(userData models.User) (models.User, models.Error) {
-// 	return s.repo.UpdateUserProfile(userData)
-// }

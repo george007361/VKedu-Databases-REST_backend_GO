@@ -164,32 +164,3 @@ func (h *Handler) forumGetThreads(c *gin.Context) {
 
 	c.JSON(errr.Code, users)
 }
-
-func (h *Handler) forumCreateThread(c *gin.Context) {
-	logrus.Println("Handle forum create thread")
-
-	slug, isExist := c.Params.Get("slug")
-	if !isExist {
-		helpers.NewErrorResponse(c, http.StatusBadRequest, "No slug in URL")
-		return
-	}
-
-	var newThreadData models.Thread
-	newThreadData.Forum = slug
-
-	if err := c.BindJSON(&newThreadData); err != nil {
-		helpers.NewErrorResponse(c, http.StatusBadRequest, "Invalid JSON: "+err.Error())
-		return
-	}
-
-	logrus.Println(newThreadData)
-
-	threadData, err := h.services.Forum.CreateThreadInForum(newThreadData)
-	if err.Code != http.StatusCreated {
-		helpers.NewErrorResponse(c, err.Code, err.Message)
-		return
-	}
-	logrus.Println(threadData)
-
-	c.JSON(http.StatusCreated, threadData)
-}

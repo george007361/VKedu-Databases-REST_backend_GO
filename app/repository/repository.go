@@ -18,20 +18,22 @@ type Forum interface {
 	GetForumData(slug string) (models.Forum, models.Error)
 	GetForumUsers(params models.ForumUsersQueryParams) ([]models.User, models.Error)
 	GetForumThreads(params models.ForumThreadsQueryParams) ([]models.Thread, models.Error)
-	CreateThreadInForum(newThreadData models.Thread) (models.Thread, models.Error)
 }
 
 type Thread interface {
+	CreateThread(newThreadData models.Thread) (models.Thread, models.Error)
 	GetThreadData(slug string) (models.Thread, models.Error)
 	GetThreadDataById(id int) (models.Thread, models.Error)
-	CreatePostsByThreadSlug(newPostsData []models.Post, slug string) ([]models.Post, models.Error)
-	CreatePostsByThreadId(newPostsData []models.Post, id int) ([]models.Post, models.Error)
+	// CreatePostsByThreadSlug(newPostsData []models.Post, slug string) ([]models.Post, models.Error)
+	// CreatePostsByThreadId(newPostsData []models.Post, id int) ([]models.Post, models.Error)
 	UpdateThreadBySlug(newData models.UpdateThread, slug string) (models.Thread, models.Error)
 	UpdateThreadById(newData models.UpdateThread, id int) (models.Thread, models.Error)
 	GetThreadPostsBySlug(params models.ThreadGetPostsParams, slug string) ([]models.Post, models.Error)
 	GetThreadPostsById(params models.ThreadGetPostsParams, id int) ([]models.Post, models.Error)
 	VoteThreadBySlug(vote models.Vote, slug string) (models.Thread, models.Error)
 	VoteThreadById(vote models.Vote, id int) (models.Thread, models.Error)
+	//
+	CreatePosts(newPostsData []models.Post, threadId int, forumSlug string) ([]models.Post, models.Error)
 }
 
 type Post interface {

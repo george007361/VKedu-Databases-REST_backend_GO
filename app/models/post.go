@@ -14,7 +14,7 @@ type Post struct { //  Сообщение внутри ветки обсужде
 }
 
 type PostUpdate struct {
-	Message string `json:"message" binding:"required"` // Собственно сообщение форума.
+	Message string `json:"message"` // Собственно сообщение форума.
 }
 
 type PostAllData struct {

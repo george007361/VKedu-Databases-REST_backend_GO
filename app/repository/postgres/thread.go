@@ -36,7 +36,7 @@ func (r *ThreadPostgres) GetThreadData(slug string) (models.Thread, models.Error
 		&threadData.Message,
 		&threadData.Slug)
 	if err != nil && err == sql.ErrNoRows {
-		return models.Thread{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprint(`Thread with slug "%s" was not found`, slug)}
+		return models.Thread{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`Thread with slug "%s" was not found`, slug)}
 	}
 
 	if err != nil && err != sql.ErrNoRows {
@@ -73,48 +73,48 @@ func (r *ThreadPostgres) GetThreadDataById(id int) (models.Thread, models.Error)
 	return threadData, models.Error{Code: http.StatusOK, Message: "Thread Data get succ"}
 }
 
-func (r *ThreadPostgres) CreatePostsByThreadId(newPostsData []models.Post, id int) ([]models.Post, models.Error) {
-	// Given : [parent, author, message]
-	// Thread id
+// func (r *ThreadPostgres) CreatePostsByThreadId(newPostsData []models.Post, id int) ([]models.Post, models.Error) {
+// 	// Given : [parent, author, message]
+// 	// Thread id
 
-	// Check thread exists
-	// Check forum exists
-	checkThreadQuery := fmt.Sprintf(`select id, forum from %s where id=$1;`, threadTable)
-	var threadId int
-	var forumSlug string
-	err := r.db.DB.QueryRow(checkThreadQuery, id).Scan(&threadId, &forumSlug)
-	if err != nil && err == sql.ErrNoRows {
-		// Если не нашёл thread по slug
-		return []models.Post{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`Thread with id "%d" not found`, id)}
-	}
+// 	// Check thread exists
+// 	// Check forum exists
+// 	checkThreadQuery := fmt.Sprintf(`select id, forum from %s where id=$1;`, threadTable)
+// 	var threadId int
+// 	var forumSlug string
+// 	err := r.db.DB.QueryRow(checkThreadQuery, id).Scan(&threadId, &forumSlug)
+// 	if err != nil && err == sql.ErrNoRows {
+// 		// Если не нашёл thread по id
+// 		return []models.Post{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`Thread with id "%d" not found`, id)}
+// 	}
 
-	logrus.Println(threadId)
-	logrus.Println(forumSlug)
+// 	logrus.Println(threadId)
+// 	logrus.Println(forumSlug)
 
-	return r.createPosts(newPostsData, threadId, forumSlug)
-}
+// 	return r.createPosts(newPostsData, threadId, forumSlug)
+// }
 
-func (r *ThreadPostgres) CreatePostsByThreadSlug(newPostsData []models.Post, slug string) ([]models.Post, models.Error) {
-	// Given : [parent, author, message]
-	// Thread Slug
+// func (r *ThreadPostgres) CreatePostsByThreadSlug(newPostsData []models.Post, slug string) ([]models.Post, models.Error) {
+// 	// Given : [parent, author, message]
+// 	// Thread Slug
 
-	// Check thread exists
-	// Check forum exists
-	checkThreadQuery := fmt.Sprintf(`select id, forum from %s where slug=$1;`, threadTable)
-	var threadId int
-	var forumSlug string
-	err := r.db.DB.QueryRow(checkThreadQuery, slug).Scan(&threadId, &forumSlug)
-	if err != nil && err == sql.ErrNoRows {
-		// Если не нашёл thread по slug
-		return []models.Post{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`Thread with slug "%s" not found`, slug)}
-	}
+// 	// Check thread exists
+// 	// Check forum exists
+// 	checkThreadQuery := fmt.Sprintf(`select id, forum from %s where slug=$1;`, threadTable)
+// 	var threadId int
+// 	var forumSlug string
+// 	err := r.db.DB.QueryRow(checkThreadQuery, slug).Scan(&threadId, &forumSlug)
+// 	if err != nil && err == sql.ErrNoRows {
+// 		// Если не нашёл thread по slug
+// 		return []models.Post{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`Thread with slug "%s" not found`, slug)}
+// 	}
 
-	logrus.Println(threadId)
-	logrus.Println(forumSlug)
-	return r.createPosts(newPostsData, threadId, forumSlug)
-}
+// 	logrus.Println(threadId)
+// 	logrus.Println(forumSlug)
+// 	return r.createPosts(newPostsData, threadId, forumSlug)
+// }
 
-func (r *ThreadPostgres) createPosts(newPostsData []models.Post, threadId int, forumSlug string) ([]models.Post, models.Error) {
+func (r *ThreadPostgres) CreatePosts(newPostsData []models.Post, threadId int, forumSlug string) ([]models.Post, models.Error) {
 
 	creationTime := time.Now()
 
@@ -127,12 +127,20 @@ func (r *ThreadPostgres) createPosts(newPostsData []models.Post, threadId int, f
 			return []models.Post{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`User with nickname "%s" not found`, post.Author)}
 		}
 
-		// Check parent exists
+		// Check parent exists and post thread eq parent thread
 		if post.Parent != 0 {
-			checkParentQuery := fmt.Sprintf(`select id from %s where id=$1;`, postTable)
-			err = r.db.DB.QueryRow(checkParentQuery, post.Parent).Scan(&post.Parent)
+			checkParentQuery := fmt.Sprintf(`select id, thread from %s where id=$1;`, postTable)
+			var parentThread int
+			err = r.db.DB.QueryRow(checkParentQuery, post.Parent).Scan(&post.Parent, &parentThread)
+
+			logrus.Println(post.Thread, "-->", parentThread)
+			// 1
 			if err != nil && err == sql.ErrNoRows {
-				return []models.Post{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`Cant create post with parent id="%d". Parent not found`, post.Parent)}
+				return []models.Post{}, models.Error{Code: http.StatusConflict, Message: fmt.Sprintf(`Cant create post with parent id="%d". Parent not found`, post.Parent)}
+			}
+			// 2
+			if parentThread != threadId {
+				return []models.Post{}, models.Error{Code: http.StatusConflict, Message: "Parent post was created in another thread"}
 			}
 		}
 	}
@@ -159,7 +167,7 @@ func (r *ThreadPostgres) createPosts(newPostsData []models.Post, threadId int, f
 	logrus.Println(valuesQueryParams...)
 
 	// Upload
-	uploadQuery := fmt.Sprintf(`insert into %s (thread, author, forum, message, parent, created) values %s returning id;`, postTable, valuesString)
+	uploadQuery := fmt.Sprintf(`insert into %s (thread, author, forum, message, parent, created) values %s returning id, created;`, postTable, valuesString)
 	rows, err := r.db.DB.Query(uploadQuery, valuesQueryParams...)
 
 	if err != nil {
@@ -168,7 +176,7 @@ func (r *ThreadPostgres) createPosts(newPostsData []models.Post, threadId int, f
 
 	idx := 0
 	for rows.Next() {
-		err := rows.Scan(&newPostsData[idx].ID)
+		err := rows.Scan(&newPostsData[idx].ID, &newPostsData[idx].Created)
 		if err != nil {
 			return []models.Post{}, models.Error{Code: http.StatusInternalServerError, Message: err.Error()}
 		}
@@ -189,12 +197,32 @@ func (r *ThreadPostgres) UpdateThreadById(newData models.UpdateThread, id int) (
 }
 
 func (r *ThreadPostgres) updateThread(newData models.UpdateThread, wherePart string, param interface{}) (models.Thread, models.Error) {
+	queryParams := make([]interface{}, 0)
+	queryParams = append(queryParams, param)
+
+	setPart := ""
+	if newData.Message != "" {
+		queryParams = append(queryParams, newData.Message)
+		setPart = setPart + fmt.Sprintf("message=$%d,", len(queryParams))
+	}
+
+	if newData.Title != "" {
+		queryParams = append(queryParams, newData.Title)
+		setPart = setPart + fmt.Sprintf("title=$%d,", len(queryParams))
+	}
+
+	if setPart != "" {
+		setPart = setPart[:len(setPart)-1]
+	}
+
 	query := fmt.Sprintf(`update %s
-						  set title=$2, message=$3
+						  set %s
 						  where %s
-						  returning id, title, author, forum, message, votes, slug, created;`, threadTable, wherePart)
+						  returning id, title, author, forum, message, votes, slug, created;`, threadTable, setPart, wherePart)
+
 	var threadData models.Thread
-	err := r.db.DB.QueryRow(query, param, newData.Title, newData.Message).Scan(
+	logrus.Println(query, queryParams)
+	err := r.db.DB.QueryRow(query, queryParams...).Scan(
 		&threadData.ID,
 		&threadData.Title,
 		&threadData.Author,
@@ -248,24 +276,24 @@ func (r *ThreadPostgres) getThreadPosts(params models.ThreadGetPostsParams, id i
 				whereStatement = " thread = $1 AND id < $2 "
 				limitStatement = "limit $3"
 				queryParams = append(queryParams, id, params.Since, params.Limit)
-				orderStatement = " created desc "
+				orderStatement = " created desc, id desc "
 			} else {
 				whereStatement = " thread = $1 "
 				limitStatement = "limit $2"
 				queryParams = append(queryParams, id, params.Limit)
-				orderStatement = " created desc "
+				orderStatement = " created desc, id desc"
 			}
 		} else {
 			if params.Since != 0 {
 				whereStatement = " thread = $1 AND id > $2 "
 				limitStatement = "limit $3"
 				queryParams = append(queryParams, id, params.Since, params.Limit)
-				orderStatement = " created "
+				orderStatement = " created, id "
 			} else {
 				whereStatement = " thread = $1 "
 				limitStatement = "limit $2"
 				queryParams = append(queryParams, id, params.Limit)
-				orderStatement = " created "
+				orderStatement = " created, id "
 			}
 		}
 	case "tree":
@@ -283,7 +311,7 @@ func (r *ThreadPostgres) getThreadPosts(params models.ThreadGetPostsParams, id i
 			}
 		} else {
 			if params.Since != 0 {
-				whereStatement = fmt.Sprintf(" thread = $1 and path (select path from %s where id=$2) ", postTable)
+				whereStatement = fmt.Sprintf(" thread = $1 and path > (select path from %s where id=$2) ", postTable)
 				limitStatement = "limit $3"
 				queryParams = append(queryParams, id, params.Since, params.Limit)
 				orderStatement = " path "
@@ -297,7 +325,7 @@ func (r *ThreadPostgres) getThreadPosts(params models.ThreadGetPostsParams, id i
 	case "parent_tree":
 		if params.Desc {
 			if params.Since != 0 {
-				whereStatement = fmt.Sprintf(" path[1] in (select id from %s where parent = 0 and thread=$1 and id < (secect path[1] from %s where id = $2) order id desc limit $3) ", postTable, postTable)
+				whereStatement = fmt.Sprintf(" path[1] in (select id from %s where parent = 0 and thread=$1 and id < (select path[1] from %s where id = $2) order by id desc limit $3) ", postTable, postTable)
 				queryParams = append(queryParams, id, params.Since, params.Limit)
 				orderStatement = " path[1] desc, path "
 			} else {
@@ -327,7 +355,9 @@ func (r *ThreadPostgres) getThreadPosts(params models.ThreadGetPostsParams, id i
 	order by %s
 	%s;`, postTable, whereStatement, orderStatement, limitStatement)
 
+	logrus.Println(query, queryParams)
 	rows, err := r.db.DB.Query(query, queryParams...)
+
 	if err != nil {
 		return []models.Post{}, models.Error{Code: http.StatusInternalServerError, Message: err.Error()}
 	}
@@ -351,7 +381,7 @@ func (r *ThreadPostgres) getThreadPosts(params models.ThreadGetPostsParams, id i
 
 		posts = append(posts, post)
 	}
-
+	logrus.Println(posts)
 	return posts, models.Error{Code: http.StatusOK, Message: "posts succ"}
 }
 
@@ -390,4 +420,34 @@ func (r *ThreadPostgres) voteThread(vote models.Vote, id int) (models.Thread, mo
 	}
 
 	return r.GetThreadDataById(id)
+}
+
+func (r *ThreadPostgres) CreateThread(newThreadData models.Thread) (models.Thread, models.Error) {
+
+	userQuery := fmt.Sprintf(`select nickname from %s where nickname=$1;`, userTable)
+	err := r.db.DB.QueryRow(userQuery, newThreadData.Author).Scan(&newThreadData.Author)
+	if err != nil {
+		return models.Thread{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`User with nickname "%s" not found`, newThreadData.Author)}
+	}
+
+	forumQuery := fmt.Sprintf(`select slug from %s where slug=$1;`, forumTable)
+	err = r.db.DB.QueryRow(forumQuery, newThreadData.Forum).Scan(&newThreadData.Forum)
+	if err != nil {
+		return models.Thread{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`Forum with slug "%s" not found`, newThreadData.Forum)}
+	}
+
+	threadQuery := fmt.Sprintf(`
+	insert into %s 
+    (title, author, message, forum, slug, created) 
+	values ($1,$2,$3,$4,nullif($5,''),$6) 
+	returning id, created, votes`, threadTable)
+
+	err = r.db.DB.QueryRow(threadQuery, newThreadData.Title, newThreadData.Author, newThreadData.Message, newThreadData.Forum, newThreadData.Slug, newThreadData.Created).Scan(&newThreadData.ID, &newThreadData.Created, &newThreadData.Votes)
+
+	if err != nil { // если такой форум уже еть
+		fmt.Println(err)
+		return models.Thread{}, models.Error{Code: 409, Message: err.Error()}
+	}
+
+	return newThreadData, models.Error{Code: http.StatusCreated, Message: "Thread created"}
 }

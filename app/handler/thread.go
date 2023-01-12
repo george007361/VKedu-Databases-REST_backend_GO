@@ -7,6 +7,7 @@ import (
 	"github.com/george007361/db-course-proj/app/helpers"
 	"github.com/george007361/db-course-proj/app/models"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 func (h *Handler) threadCreatePosts(c *gin.Context) {
@@ -35,6 +36,7 @@ func (h *Handler) threadCreatePosts(c *gin.Context) {
 		postsData, errr = h.services.Thread.CreatePostsByThreadId(newPostsData, id)
 	}
 
+	logrus.Error(errr)
 	if errr.Code != http.StatusCreated {
 		helpers.NewErrorResponse(c, errr.Code, errr.Message)
 		return
@@ -154,16 +156,18 @@ func (h *Handler) threadGetPosts(c *gin.Context) {
 	// Sort
 	sortStr, isExist := c.GetQuery("sort")
 	sort := "flat"
+	logrus.Println(sortStr, isExist)
 	if isExist {
-		switch sortStr {
-		case "flat":
-		case "tree":
-		case "parent_tree":
-			sort = sortStr
-		default:
-			helpers.NewErrorResponse(c, http.StatusBadRequest, "Invalig query param desc")
-			return
-		}
+		sort = sortStr
+		// switch sortStr {
+		// case "flat":
+		// case "tree":
+		// case "parent_tree":
+		// 	sort = sortStr
+		// default:
+		// 	helpers.NewErrorResponse(c, http.StatusBadRequest, "Invalig query param desc")
+		// 	return
+		// }
 	}
 
 	queryParams := models.ThreadGetPostsParams{
@@ -188,6 +192,14 @@ func (h *Handler) threadGetPosts(c *gin.Context) {
 
 	if errr.Code != http.StatusOK {
 		helpers.NewErrorResponse(c, errr.Code, errr.Message)
+		return
+	}
+
+	logrus.Println(len(threadPosts))
+
+	// TODO FIX THIS SHIT
+	if len(threadPosts) == 0 {
+		c.JSON(errr.Code, []string{})
 		return
 	}
 
@@ -226,4 +238,30 @@ func (h *Handler) threadVote(c *gin.Context) {
 	}
 
 	c.JSON(errr.Code, threadData)
+}
+
+func (h *Handler) createThread(c *gin.Context) {
+	logrus.Println("Handle forum create thread")
+
+	slug, isExist := c.Params.Get("slug")
+	if !isExist {
+		helpers.NewErrorResponse(c, http.StatusBadRequest, "No slug in URL")
+		return
+	}
+
+	var newThreadData models.Thread
+	newThreadData.Forum = slug
+
+	if err := c.BindJSON(&newThreadData); err != nil {
+		helpers.NewErrorResponse(c, http.StatusBadRequest, "Invalid JSON: "+err.Error())
+		return
+	}
+
+	threadData, err := h.services.Thread.CreateThread(newThreadData)
+	if err.Code == http.StatusCreated || err.Code == http.StatusConflict {
+		c.JSON(err.Code, threadData)
+		return
+	}
+
+	helpers.NewErrorResponse(c, err.Code, err.Message)
 }

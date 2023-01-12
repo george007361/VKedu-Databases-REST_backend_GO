@@ -127,6 +127,10 @@ $$ language 'plpgsql';
 create trigger trig_thread_added_add_user_to_forum
 after insert on threads for each row execute procedure func_after_thread_created_add_user_to_forum();
 
+-- Добавление пользователя к форуму при создании поста
+create trigger trig_post_added_add_user_to_forum
+after insert on posts for each row execute procedure func_after_thread_created_add_user_to_forum();
+
 
 -- Обновление пути к посту
 create or replace function func_update_post_path()

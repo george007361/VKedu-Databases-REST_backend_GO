@@ -22,7 +22,7 @@ func (h *Handler) InitRoutes() *gin.Engine {
 		{
 			forum.POST("/create", h.forumCreate)
 			forum.GET("/:slug/details", h.forumGetData)
-			forum.POST("/:slug/create", h.forumCreateThread)
+			forum.POST("/:slug/create", h.createThread)
 			forum.GET("/:slug/users", h.forumGetUsers)
 			forum.GET("/:slug/threads", h.forumGetThreads)
 		}

@@ -16,10 +16,10 @@ type Forum interface {
 	GetForumData(slug string) (models.Forum, models.Error)
 	GetForumUsers(params models.ForumUsersQueryParams) ([]models.User, models.Error)
 	GetForumThreads(params models.ForumThreadsQueryParams) ([]models.Thread, models.Error)
-	CreateThreadInForum(newThreadData models.Thread) (models.Thread, models.Error)
 }
 
 type Thread interface {
+	CreateThread(newThreadData models.Thread) (models.Thread, models.Error)
 	GetThreadData(slug string) (models.Thread, models.Error)
 	GetThreadDataById(id int) (models.Thread, models.Error)
 	CreatePostsByThreadSlug(newPostsData []models.Post, slug string) ([]models.Post, models.Error)

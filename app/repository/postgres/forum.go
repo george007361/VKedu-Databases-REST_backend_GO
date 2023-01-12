@@ -58,7 +58,7 @@ func (r *ForumPostgres) GetForumData(slug string) (models.Forum, models.Error) {
 }
 
 func (r *ForumPostgres) GetForumUsers(params models.ForumUsersQueryParams) ([]models.User, models.Error) {
-
+	logrus.Printf("%v\n", params)
 	checkQuery := fmt.Sprintf(`select slug from %s where slug=$1;`, forumTable)
 	err := r.db.DB.QueryRow(checkQuery, params.Slug).Scan(&params.Slug)
 	if err != nil && err == sql.ErrNoRows {
@@ -88,7 +88,7 @@ func (r *ForumPostgres) GetForumUsers(params models.ForumUsersQueryParams) ([]mo
 							order by nickname %s 
 							limit $2;`,
 		forumUsersTable, whereStatementStr, orderStatementStr)
-
+	logrus.Println(query, queryParams)
 	rows, err := r.db.DB.Query(query, queryParams...)
 
 	if err != nil {
@@ -104,7 +104,6 @@ func (r *ForumPostgres) GetForumUsers(params models.ForumUsersQueryParams) ([]mo
 			&user.About,
 			&user.Email,
 		)
-		logrus.Println(err)
 
 		if err != nil {
 			return []models.User{}, models.Error{Code: http.StatusInternalServerError, Message: err.Error()}
@@ -173,34 +172,4 @@ func (r *ForumPostgres) GetForumThreads(params models.ForumThreadsQueryParams) (
 		threads = append(threads, *thread)
 	}
 	return threads, models.Error{Code: http.StatusOK, Message: "Forum threads list get succ"}
-}
-
-func (r *ForumPostgres) CreateThreadInForum(newThreadData models.Thread) (models.Thread, models.Error) {
-
-	userQuery := fmt.Sprintf(`select nickname from %s where nickname=$1;`, userTable)
-	err := r.db.DB.QueryRow(userQuery, newThreadData.Author).Scan(&newThreadData.Author)
-	if err != nil {
-		return models.Thread{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`User with nickname "%s" not found`, newThreadData.Author)}
-	}
-
-	forumQuery := fmt.Sprintf(`select slug from %s where slug=$1;`, forumTable)
-	err = r.db.DB.QueryRow(forumQuery, newThreadData.Forum).Scan(&newThreadData.Forum)
-	if err != nil {
-		return models.Thread{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`Forum with slug "%s" not found`, newThreadData.Forum)}
-	}
-
-	threadQuery := fmt.Sprintf(`
-	insert into %s 
-    (title, author, message, forum, slug, created) 
-	values ($1,$2,$3,$4,nullif($5,''),$6) 
-	returning id, created, votes`, threadTable)
-
-	err = r.db.DB.QueryRow(threadQuery, newThreadData.Title, newThreadData.Author, newThreadData.Message, newThreadData.Forum, newThreadData.Slug, newThreadData.Created).Scan(&newThreadData.ID, &newThreadData.Created, &newThreadData.Votes)
-
-	if err != nil { // если такой форум уже еть
-		fmt.Println(err)
-		return models.Thread{}, models.Error{Code: 409, Message: err.Error()}
-	}
-
-	return newThreadData, models.Error{Code: http.StatusCreated, Message: "Thread created"}
 }
