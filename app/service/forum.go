@@ -5,7 +5,6 @@ import (
 
 	"github.com/george007361/db-course-proj/app/models"
 	"github.com/george007361/db-course-proj/app/repository"
-	"github.com/sirupsen/logrus"
 )
 
 type ForumService struct {
@@ -26,7 +25,6 @@ func (s *ForumService) CreateForum(newForumData models.Forum) (models.Forum, mod
 	if errGet.Code != http.StatusOK {
 		return forumData, errGet
 	}
-	logrus.Println(forumData, errCreate, errGet)
 	return forumData, errCreate
 }
 

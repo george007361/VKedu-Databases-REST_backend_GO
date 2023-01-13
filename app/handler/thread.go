@@ -36,7 +36,6 @@ func (h *Handler) threadCreatePosts(c *gin.Context) {
 		postsData, errr = h.services.Thread.CreatePostsByThreadId(newPostsData, id)
 	}
 
-	logrus.Error(errr)
 	if errr.Code != http.StatusCreated {
 		helpers.NewErrorResponse(c, errr.Code, errr.Message)
 		return
@@ -156,7 +155,6 @@ func (h *Handler) threadGetPosts(c *gin.Context) {
 	// Sort
 	sortStr, isExist := c.GetQuery("sort")
 	sort := "flat"
-	logrus.Println(sortStr, isExist)
 	if isExist {
 		sort = sortStr
 		// switch sortStr {
@@ -194,8 +192,6 @@ func (h *Handler) threadGetPosts(c *gin.Context) {
 		helpers.NewErrorResponse(c, errr.Code, errr.Message)
 		return
 	}
-
-	logrus.Println(len(threadPosts))
 
 	// TODO FIX THIS SHIT
 	if len(threadPosts) == 0 {

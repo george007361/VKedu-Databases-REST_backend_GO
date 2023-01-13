@@ -170,6 +170,35 @@ create trigger trig_after_update_vote
 after update on votes for each row execute procedure func_update_thread_votes_after_update();
 
 
+-- forums
+CREATE INDEX IF NOT EXISTS index_forums_user_nickname ON forums ("user");
+
+-- threads
+CREATE INDEX IF NOT EXISTS index_threads_author ON threads (author);
+CREATE INDEX IF NOT EXISTS index_threads_forum ON threads (forum);
+
+-- other
+
+-- forum_user
+CREATE INDEX IF NOT EXISTS index_forum_user_forum_user_nickname ON nickname_forum (forum, nickname);
+
+-- posts
+CREATE INDEX IF NOT EXISTS index_posts_thread_id on posts (thread, id);
+CREATE INDEX IF NOT EXISTS index_posts_thread_post_tree on posts (thread, path);
+CREATE INDEX IF NOT EXISTS index_posts_parent_thread_id on posts (parent, thread, id);
+CREATE INDEX IF NOT EXISTS index_posts_post_tree_one_post_tree on posts ((path[1]), path);
+
+-- users
+CREATE INDEX IF NOT EXISTS index_users_email ON users (email);
+CREATE INDEX IF NOT EXISTS index_users_email_nickname ON users (email, nickname);
+
+-- threads
+CREATE INDEX IF NOT EXISTS index_threads_slug on threads (slug);
+CREATE INDEX IF NOT EXISTS index_threads_forum_created ON threads (forum, created);
+
+VACUUM ANALYZE;
+
+
 
 
 

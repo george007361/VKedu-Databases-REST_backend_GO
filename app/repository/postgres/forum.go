@@ -155,9 +155,11 @@ func (r *ForumPostgres) GetForumThreads(params models.ForumThreadsQueryParams) (
 	threads := make([]models.Thread, 0)
 	for rows.Next() {
 		thread := &models.Thread{}
+		var threadSlug *string
+
 		err = rows.Scan(
 			&thread.ID,
-			&thread.Slug,
+			&threadSlug,
 			&thread.Forum,
 			&thread.Author,
 			&thread.Title,
@@ -167,6 +169,9 @@ func (r *ForumPostgres) GetForumThreads(params models.ForumThreadsQueryParams) (
 		)
 		if err != nil {
 			return []models.Thread{}, models.Error{Code: http.StatusInternalServerError, Message: err.Error()}
+		}
+		if threadSlug != nil {
+			thread.Slug = *threadSlug
 		}
 
 		threads = append(threads, *thread)

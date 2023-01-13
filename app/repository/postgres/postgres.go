@@ -2,17 +2,21 @@ package postgres
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 )
 
 type Config struct {
-	Host     string
-	Port     string
-	Username string
-	Password string
-	DBName   string
-	SSLMode  string
+	Host            string
+	Port            string
+	Username        string
+	Password        string
+	DBName          string
+	SSLMode         string
+	ConnMaxLifeTime time.Duration
+	MaxOpenConns    int
+	MaxIdleConns    int
 }
 
 const (
@@ -32,6 +36,10 @@ func NewPostgresDB(conf Config) (*sqlx.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	db.SetConnMaxLifetime(conf.ConnMaxLifeTime)
+	db.SetMaxOpenConns(conf.MaxOpenConns)
+	db.SetMaxIdleConns(conf.MaxIdleConns)
 
 	err = db.Ping()
 	if err != nil {

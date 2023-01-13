@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/george007361/db-course-proj/app/handler"
 	"github.com/george007361/db-course-proj/app/repository"
@@ -17,12 +18,15 @@ func main() {
 	// logrus.SetFormatter(new(logrus.JSONFormatter))
 
 	db, err := postgres.NewPostgresDB(postgres.Config{
-		Host:     "localhost",
-		Port:     "5438",
-		Username: "postgres",
-		Password: "12345678",
-		DBName:   "postgres",
-		SSLMode:  "disable",
+		Host:            "localhost",
+		Port:            "5438",
+		Username:        "postgres",
+		Password:        "12345678",
+		DBName:          "postgres",
+		SSLMode:         "disable",
+		MaxOpenConns:    100,
+		MaxIdleConns:    50,
+		ConnMaxLifeTime: time.Second * 30,
 	})
 
 	if err != nil {
