@@ -19,14 +19,14 @@ func main() {
 
 	db, err := postgres.NewPostgresDB(postgres.Config{
 		Host:            "localhost",
-		Port:            "5438",
-		Username:        "postgres",
+		Port:            "5432",
+		Username:        "george",
 		Password:        "12345678",
-		DBName:          "postgres",
+		DBName:          "george_forum_db",
 		SSLMode:         "disable",
 		MaxOpenConns:    100,
 		MaxIdleConns:    50,
-		ConnMaxLifeTime: time.Second * 30,
+		ConnMaxLifeTime: time.Second * 100,
 	})
 
 	if err != nil {

@@ -36,7 +36,7 @@ create unlogged table posts (
     forum citext constraint posts_forum_fk references forums(slug),
     thread integer,
     created timestamp with time zone default CURRENT_TIMESTAMP,
-    path integer[]
+    path bigint[]
 );
 
 create unlogged table threads (
