@@ -26,7 +26,7 @@ func (r *ForumPostgres) CreateForum(newForumData models.Forum) (models.Forum, mo
 		return models.Forum{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`User with nickname "%s" not found`, newForumData.User)}
 	}
 
-	forumQuery := fmt.Sprintf(`insert into %s (slug, title, "user")	values ($1, $2, $3) returning slug, title, "user", posts, threads`, forumTable)
+	forumQuery := fmt.Sprintf(`insert into %s (slug, title, author_nickname)	values ($1, $2, $3) returning slug, title, author_nickname, posts, threads`, forumTable)
 	var forumData models.Forum
 
 	err = r.db.DB.QueryRow(forumQuery, newForumData.Slug, newForumData.Title, newForumData.User).Scan(&forumData.Slug, &forumData.Title, &forumData.User, &forumData.Posts, &forumData.Threads)
@@ -40,7 +40,7 @@ func (r *ForumPostgres) CreateForum(newForumData models.Forum) (models.Forum, mo
 }
 
 func (r *ForumPostgres) GetForumData(slug string) (models.Forum, models.Error) {
-	query := fmt.Sprintf(`select slug, title, "user", posts, threads from %s where slug=$1`, forumTable)
+	query := fmt.Sprintf(`select slug, title, author_nickname, posts, threads from %s where slug=$1`, forumTable)
 
 	var forumData models.Forum
 
@@ -84,7 +84,7 @@ func (r *ForumPostgres) GetForumUsers(params models.ForumUsersQueryParams) ([]mo
 	}
 
 	query := fmt.Sprintf(`select nickname, fullname, about, email from %s
-							where forum=$1 %s
+							where forum_slug=$1 %s
 							order by nickname %s 
 							limit $2;`,
 		forumUsersTable, whereStatementStr, orderStatementStr)
@@ -140,9 +140,9 @@ func (r *ForumPostgres) GetForumThreads(params models.ForumThreadsQueryParams) (
 		orderStatementStr = "desc"
 	}
 
-	query := fmt.Sprintf(`select id, slug, forum, author, title, message, votes, created 
+	query := fmt.Sprintf(`select id, slug, forum_slug, author_nickname, title, message, votes, created 
 						from %s 
-						where forum = $1 %s
+						where forum_slug = $1 %s
 						order by created %s
 						limit $2`,
 		threadTable, whereStatementStr, orderStatementStr)

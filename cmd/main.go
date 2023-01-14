@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/george007361/db-course-proj/app/handler"
@@ -14,10 +13,12 @@ import (
 )
 
 func main() {
-	fmt.Println("Hello world!")
-	// logrus.SetFormatter(new(logrus.JSONFormatter))
-
 	db, err := postgres.NewPostgresDB(postgres.Config{
+		// Host:     "localhost",
+		// Port:     "5438",
+		// Username: "postgres",
+		// Password: "12345678",
+		// DBName:   "postgres",
 		Host:            "localhost",
 		Port:            "5432",
 		Username:        "george",
@@ -41,5 +42,4 @@ func main() {
 	if err := server.Run("5000", handlers.InitRoutes()); err != nil {
 		logrus.Fatalf("Cant run server: %s", err.Error())
 	}
-
 }

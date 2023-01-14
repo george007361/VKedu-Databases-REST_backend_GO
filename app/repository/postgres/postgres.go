@@ -23,7 +23,7 @@ const (
 	userTable       = "users"
 	forumTable      = "forums"
 	threadTable     = "threads"
-	forumUsersTable = "nickname_forum"
+	forumUsersTable = "forum_users"
 	postTable       = "posts"
 	voteTable       = "votes"
 )

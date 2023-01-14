@@ -18,7 +18,7 @@ func NewPostPostgres(db *sqlx.DB) *PostPostgres {
 }
 
 func (r *PostPostgres) GetPostData(id int) (models.Post, models.Error) {
-	query := fmt.Sprintf(` select id, parent, author, message, isedited, forum, thread, created
+	query := fmt.Sprintf(` select id, parent_id, author_nickname, message, isedited, forum_slug, thread_id, created
 							from %s
 							where id=$1`, postTable)
 
@@ -49,7 +49,7 @@ func (r *PostPostgres) UpdatePostData(newData models.PostUpdate, id int) (models
 	query := fmt.Sprintf(`update %s
 						  set message=$1, isedited=true 
 						  where id=$2 
-						  returning id, parent, author, message, isedited, forum, thread, created`, postTable)
+						  returning id, parent_id, author_nickname, message, isedited, forum_slug, thread_id, created`, postTable)
 
 	var postData models.Post
 	err := r.db.DB.QueryRow(query, newData.Message, id).Scan(

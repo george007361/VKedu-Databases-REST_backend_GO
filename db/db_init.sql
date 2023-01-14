@@ -1,397 +1,195 @@
--- citext - тот же TEXT только без учета регистра, авто lower при сравнении
-create extension if not exists citext;
+-- CITEXT - тот же TEXT только без учета регистра, авто lower при сравнении
+-- UNLOGGED - нежурналируемые. ВЫигрываем по времени, теряем по аварийно-безопасности
+-- COLLATE "C" - сравнение по порядку байт
+
+-- Подключаем citext
+CREATE EXTENSION IF NOT EXISTS CITEXT;
 
 -- Чистим бд
-drop table if exists threads,
+DROP TABLE IF EXISTS threads,
 forums,
 users,
 votes,
 posts,
-nickname_forum cascade;
+nickname_forum CASCADE;
 
--- unlogged - нежурналируемые. ВЫигрываем по времени, теряем по аварийно-безопасности
--- collate "C" - сравнение по порядку байт
-create unlogged table users (
-    nickname citext collate "C" constraint users_pk not null primary key,
-    fullname text not null,
-    about text,
-    email citext unique not null
+
+-- Таблица пользователей
+CREATE UNLOGGED TABLE users (
+    nickname CITEXT COLLATE "C" NOT NULL PRIMARY KEY,
+    fullname TEXT NOT NULL,
+    about TEXT,
+    email CITEXT UNIQUE NOT NULL
 );
 
-create unlogged table forums (
-    slug citext not null constraint forums_pk primary key,
-    title text not null,
-    "user" citext constraint forums_user_fk references users(nickname) not null,
-    posts bigint default 0,
-    threads bigint default 0
+
+-- Таблица форумов
+CREATE UNLOGGED TABLE forums (
+    slug CITEXT NOT NULL PRIMARY KEY,
+    title TEXT NOT NULL,
+    author_nickname CITEXT REFERENCES users(nickname) NOT NULL,
+    posts BIGINT DEFAULT 0,
+    threads BIGINT DEFAULT 0
 );
 
---     path bigint [] default array [] :: bigint []
-create unlogged table posts (
-    id bigserial constraint posts_pk primary key,
-    parent bigint default 0,
-    author citext constraint posts_author_fk references users(nickname),
-    message text,
-    isedited boolean default false,
-    forum citext constraint posts_forum_fk references forums(slug),
-    thread integer,
-    created timestamp with time zone default CURRENT_TIMESTAMP,
-    path bigint[]
+-- Таблица постов
+CREATE UNLOGGED TABLE posts (
+    id BIGSERIAL  PRIMARY KEY,
+    parent_id BIGINT DEFAULT 0,
+    author_nickname CITEXT  REFERENCES users(nickname),
+    message TEXT,
+    isedited BOOLEAN DEFAULT false,
+    forum_slug CITEXT  REFERENCES forums(slug),
+    thread_id BIGINT,
+    created timestamp with time zone ,
+    path_tree BIGINT[]
 );
 
-create unlogged table threads (
-    id bigserial constraint threads_pk primary key,
-    created timestamp with time zone default CURRENT_TIMESTAMP,
-    votes integer default 0,
-    
-    title text not null,
-    author citext constraint threads_author_fk references users(nickname) not null,
-    forum citext constraint threads_forum_fk references forums(slug) not null,
-    message text not null,
-    slug citext unique
+-- Таблица веток
+CREATE UNLOGGED TABLE threads (
+    id BIGSERIAL  PRIMARY KEY,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    slug CITEXT UNIQUE,
+    forum_slug CITEXT  REFERENCES forums(slug) NOT NULL,
+    author_nickname CITEXT  REFERENCES users(nickname) NOT NULL,
+    created timestamp with time zone,
+    votes BIGINT DEFAULT 0
 );
 
-create unlogged table votes (
-    id bigserial constraint votes_pk primary key,
-    nickname citext constraint votes_nickname_fk references users(nickname),
-    voice integer,
-    thread integer not null constraint votes_thread_fk references threads(id),
-    unique (thread, nickname)
+-- Таблица голосов
+CREATE UNLOGGED TABLE votes (
+    id BIGSERIAL  PRIMARY KEY,
+    nickname CITEXT  REFERENCES users(nickname),
+    voice BIGINT,
+    thread_id BIGINT NOT NULL  REFERENCES threads(id),
+    UNIQUE (thread_id, nickname)
 );
 
-create unlogged table nickname_forum (
-    nickname citext collate "C" references users(nickname),
-    fullname text,
-    about text,
-    email citext,
-    forum citext references forums,
-    unique (forum, nickname)
+-- Таблица пользователей формума
+CREATE UNLOGGED TABLE forum_users (
+    nickname CITEXT COLLATE "C" REFERENCES users(nickname),
+    fullname TEXT,
+    about TEXT,
+    email CITEXT,
+    forum_slug CITEXT REFERENCES forums(slug),
+    UNIQUE (forum_slug, nickname)
 );
 
 
 --  Обновление количества веток на форуме при создании новой
-create or replace function func_after_thread_created_update_threads() returns trigger as $$
-begin
-    update forums set threads = threads + 1
-    where new.forum = slug;
-return null;
-end
-$$ language 'plpgsql';
+CREATE OR REPLACE FUNCTION func_after_thread_CREATEd_update_threads() RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE forums SET threads = threads + 1
+    WHERE slug = NEW.forum_slug;
+RETURN NULL;
+END
+$$ LANGUAGE 'plpgsql';
 
-create trigger trig_thread_added_count_threads
-after insert on threads for each row execute procedure func_after_thread_created_update_threads();
+CREATE TRIGGER trig_thread_added_count_threads
+AFTER INSERT ON threads FOR EACH ROW EXECUTE PROCEDURE func_after_thread_created_update_threads();
 
 --  Обновление количества постов на форуме при создании нового
-create or replace function func_after_post_created_update_forum_posts() returns trigger as $$
-begin
-    update forums set posts = posts + 1
-    where new.forum = slug;
-return null;
-end
-$$ language 'plpgsql';
+CREATE OR REPLACE FUNCTION func_after_post_CREATEd_update_forum_posts() RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE forums SET posts = posts + 1
+    WHERE slug = NEW.forum_slug;
+RETURN NULL;
+END
+$$ LANGUAGE 'plpgsql';
 
-create trigger trig_post_added_count_posts
-after insert on posts for each row execute procedure func_after_post_created_update_forum_posts();
-
-
+CREATE TRIGGER trig_post_added_count_posts
+AFTER INSERT ON posts FOR EACH ROW EXECUTE PROCEDURE func_after_post_created_update_forum_posts();
 
 -- Добавление пользователя к форуму при создании ветки
-create or replace function func_after_thread_created_add_user_to_forum() returns trigger as $$
-declare
-    author_fullname text;
-    author_about text;
-    author_email citext;
-begin
-    select fullname, about, email from users
-    where nickname = new.author 
-    into author_fullname, author_about, author_email;
+CREATE OR REPLACE FUNCTION func_after_thread_CREATEd_add_user_to_forum() RETURNS TRIGGER AS $$
+DECLARE
+    author_fullname TEXT;
+    author_about TEXT;
+    author_email CITEXT;
+BEGIN
+    SELECT fullname, about, email FROM users
+    WHERE nickname = NEW.author_nickname 
+    INTO author_fullname, author_about, author_email;
 
-    insert into nickname_forum (
+    INSERT INTO forum_users (
         nickname,
         fullname,
         about,
         email,
-        forum 
+        forum_slug 
     ) values (
-        new.author,
+        NEW.author_nickname,
         author_fullname,
         author_about,
         author_email,
-        new.forum
+        NEW.forum_slug
     )
-    on conflict do nothing;
-    return new;
-end
-$$ language 'plpgsql';
+    ON CONFLICT DO NOTHING;
+    RETURN NEW;
+END
+$$ LANGUAGE 'plpgsql';
 
-create trigger trig_thread_added_add_user_to_forum
-after insert on threads for each row execute procedure func_after_thread_created_add_user_to_forum();
+CREATE TRIGGER trig_thread_added_add_user_to_forum
+AFTER INSERT ON threads FOR EACH ROW EXECUTE PROCEDURE func_after_thread_created_add_user_to_forum();
 
 -- Добавление пользователя к форуму при создании поста
-create trigger trig_post_added_add_user_to_forum
-after insert on posts for each row execute procedure func_after_thread_created_add_user_to_forum();
-
+CREATE TRIGGER trig_post_added_add_user_to_forum
+AFTER INSERT ON posts FOR EACH ROW EXECUTE PROCEDURE func_after_thread_created_add_user_to_forum();
 
 -- Обновление пути к посту
-create or replace function func_update_post_path()
-returns trigger as $$
-begin
-    new.path = (select path from posts where id=new.parent) || new.id;
-    return new;
-end
+CREATE OR REPLACE FUNCTION func_update_post_path()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.path_tree = (SELECT path_tree FROM posts WHERE id=NEW.parent_id) || NEW.id;
+    RETURN NEW;
+END
 $$ LANGUAGE plpgsql;
 
-create trigger trig_insert_post
-before insert on posts for each row execute procedure func_update_post_path();
-
+CREATE TRIGGER trig_insert_post
+before INSERT ON posts FOR EACH ROW EXECUTE PROCEDURE func_update_post_path();
 
 -- Обновление рейтинга thread после создания vote
-create or replace function func_update_thread_votes_after_insert()
-returns trigger as $$
-begin
-    update threads set votes = votes + new.voice where id = new.thread;
-    return new;
-end
-$$ language plpgsql;
+CREATE OR REPLACE FUNCTION func_update_thread_votes_after_insert()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE threads SET votes = votes + NEW.voice WHERE id = NEW.thread_id;
+    RETURN NEW;
+END
+$$ LANGUAGE plpgsql;
 
-create trigger trig_after_insent_vote
-after insert on votes for each row execute procedure func_update_thread_votes_after_insert();
+CREATE TRIGGER trig_after_insent_vote
+AFTER INSERT ON votes FOR EACH ROW EXECUTE PROCEDURE func_update_thread_votes_after_insert();
 
 -- Обновление рейтинга thread после изменения vote
-create or replace function func_update_thread_votes_after_update()
-returns trigger as $$
-begin
-    update threads set votes = votes + new.voice - old.voice where id = new.thread;
-    return new;
-end
-$$ language plpgsql;
+CREATE OR REPLACE FUNCTION func_update_thread_votes_after_update()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE threads SET votes = votes + NEW.voice - old.voice WHERE id = NEW.thread_id;
+    RETURN NEW;
+END
+$$ LANGUAGE plpgsql;
 
-create trigger trig_after_update_vote
-after update on votes for each row execute procedure func_update_thread_votes_after_update();
+CREATE TRIGGER trig_after_update_vote
+AFTER UPDATE ON votes FOR EACH ROW EXECUTE PROCEDURE func_update_thread_votes_after_update();
 
 
--- forums
-CREATE INDEX IF NOT EXISTS index_forums_user_nickname ON forums ("user");
+-- Индексы
+CREATE INDEX IF NOT EXISTS index_forums_user_nickname ON forums (author_nickname);
 
--- threads
-CREATE INDEX IF NOT EXISTS index_threads_author ON threads (author);
-CREATE INDEX IF NOT EXISTS index_threads_forum ON threads (forum);
+CREATE INDEX IF NOT EXISTS index_threads_author ON threads (author_nickname);
+CREATE INDEX IF NOT EXISTS index_threads_forum ON threads (forum_slug);
+CREATE INDEX IF NOT EXISTS index_threads_slug ON threads (slug);
+CREATE INDEX IF NOT EXISTS index_threads_forum_CREATEd ON threads (forum_slug, created);
 
--- other
+CREATE INDEX IF NOT EXISTS index_forum_user_forum_user_nickname ON forum_users (forum_slug, nickname);
 
--- forum_user
-CREATE INDEX IF NOT EXISTS index_forum_user_forum_user_nickname ON nickname_forum (forum, nickname);
+CREATE INDEX IF NOT EXISTS index_posts_thread_id ON posts (thread_id, id);
+CREATE INDEX IF NOT EXISTS index_posts_thread_post_tree ON posts (thread_id, path_tree);
+CREATE INDEX IF NOT EXISTS index_posts_parent_thread_id ON posts (parent_id, thread_id, id);
+CREATE INDEX IF NOT EXISTS index_posts_post_tree_one_post_tree ON posts ((path_tree[1]), path_tree);
 
--- posts
-CREATE INDEX IF NOT EXISTS index_posts_thread_id on posts (thread, id);
-CREATE INDEX IF NOT EXISTS index_posts_thread_post_tree on posts (thread, path);
-CREATE INDEX IF NOT EXISTS index_posts_parent_thread_id on posts (parent, thread, id);
-CREATE INDEX IF NOT EXISTS index_posts_post_tree_one_post_tree on posts ((path[1]), path);
-
--- users
 CREATE INDEX IF NOT EXISTS index_users_email ON users (email);
 CREATE INDEX IF NOT EXISTS index_users_email_nickname ON users (email, nickname);
 
--- threads
-CREATE INDEX IF NOT EXISTS index_threads_slug on threads (slug);
-CREATE INDEX IF NOT EXISTS index_threads_forum_created ON threads (forum, created);
-
 VACUUM ANALYZE;
-
-
-
-
-
-    -- create
-    -- or replace function add_post() returns trigger as $ $ begin
-    -- update
-    --     forum
-    -- set
-    --     posts = posts + 1
-    -- where
-    --     slug = new.forum;
-    -- new.path = (
-    --     select
-    --         path
-    --     from
-    --         post
-    --     where
-    --         id = new.parent
-    --     limit
-    --         1
-    -- ) || new.id;
-    -- return new;
-    -- end $ $ language 'plpgsql';
-
-
-    -- create trigger add_post before
-    -- insert
-    --     on post for each row execute procedure add_post();
-
-
-    -- create
-    -- or replace function add_vote() returns trigger as $ $ begin
-    -- update
-    --     thread
-    -- set
-    --     votes =(votes + new.voice)
-    -- where
-    --     id = new.thread;
-    -- return new;
-    -- end $ $ language 'plpgsql';
-    -- create trigger add_vote
-    -- after
-    -- insert
-    --     on votes for each row execute procedure add_vote();
-    -- create
-    -- or replace function update_vote() returns trigger as $ $ begin if old.voice <> new.voice then
-    -- update
-    --     thread
-    -- set
-    --     votes = votes - old.voice + new.voice
-    -- where
-    --     id = new.thread;
-    -- end if;
-    -- return new;
-    -- end $ $ language 'plpgsql';
-    -- create trigger update_vote
-    -- after
-    -- update
-    --     on votes for each row execute procedure update_vote();
-    -- create
-    -- or replace function add_post_user() returns trigger as $ $ declare author_nickname citext;
-    -- author_fullname text;
-    -- author_about text;
-    -- author_email citext;
-    -- begin
-    -- select
-    --     nickname,
-    --     fullname,
-    --     about,
-    --     email
-    -- from
-    --     users
-    -- where
-    --     nickname = new.author into author_nickname,
-    --     author_fullname,
-    --     author_about,
-    --     author_email;
-    -- insert into
-    --     nickname_forum (nickname, fullname, about, email, forum)
-    -- values
-    --     (
-    --         author_nickname,
-    --         author_fullname,
-    --         author_about,
-    --         author_email,
-    --         new.forum
-    --     ) on conflict do nothing;
-    -- return new;
-    -- end $ $ language 'plpgsql';
-    -- create trigger add_post_user
-    -- after
-    -- insert
-    --     on post for each row execute procedure add_post_user();
-    
-
-    
-    -- create index if not exists for_user_nickname on users using hash (nickname);
-    -- create index if not exists for_user_email on users using hash (email);
-    -- create index if not exists for_forum_slug on forum using hash (slug);
-    -- create index if not exists for_thread_slug on thread using hash (slug);
-    -- create index if not exists for_thread_forum on thread using hash (forum);
-    -- create index if not exists for_post_thread on post using hash (thread);
-    -- create index if not exists for_thread_created on thread (created);
-    -- create index if not exists for_thread_created_forum on thread (forum, created);
-    -- create index if not exists for_post_path_single on post ((path [1]));
-    -- create index if not exists for_post_id_path_single on post (id, (path [1]));
-    -- create index if not exists for_post_path on post (path);
-    -- create unique index if not exists for_votes_nickname_thread_nickname on votes (thread, nickname);
-    -- create index if not exists for_nickname_forum on nickname_forum using hash (nickname);
-    -- create index if not exists for_nickname_forum_nickname on nickname_forum (forum, nickname);
-    -- vacuum;
-    -- vacuum analyze;
-    -- -- -- ОЧИСТКА
-    -- -- DROP TABLE IF EXISTS votes CASCADE;
-    -- -- DROP TABLE IF EXISTS users CASCADE;
-    -- -- DROP TABLE IF EXISTS posts;
-    -- -- DROP TABLE IF EXISTS forums CASCADE;
-    -- -- DROP TABLE IF EXISTS threads CASCADE;
-    -- -- DROP TABLE IF EXISTS forum_users CASCADE;
-    -- -- -- сОЗДАНИЕ ТАБЛИЦ
-    -- -- CREATE TABLE users (
-    -- --     nickname TEXT PRIMARY KEY NOT NULL UNIQUE,
-    -- --     fullname TEXT,
-    -- --     about TEXT,
-    -- --     email TEXT UNIQUE
-    -- -- );
-
-
-
-
--- \echo "  --Done" 
--- \echo "  -- -- Done" 
---  \c postgres 
---  \dt
-
--- insert into users(nickname, fullname, about, email)
--- values('George1', 'George Illar', 'Hello!!!', 'email1@mail.ru'),
--- ('George2', 'George Illar', 'Hello!!!', 'email2@mail.ru'),
--- ('George3', 'George Illar', 'Hello!!!', 'email3@mail.ru');
-    
-
--- select * from users;
-    
--- insert into forums (
---     slug,
---     title,
---     "user",
---     posts,
---     threads
--- )
--- values (
---     'Forum1', 
---     'Title1', 
---     (SELECT nickname
---          FROM users
---         WHERE nickname = 'George1'),
---         123,
---         321
--- );
-
--- select * from forums;
-
--- insert into threads (
---     title,
---     author,
---     forum,
---     message,
---     slug
--- )
--- values (
---     'Thread1',
---     (select nickname from users where nickname = 'george2'),
---     (select slug from forums where slug = 'Forum1'),
---     'Msg1',
---     'Slug11'
--- );
-
-
--- select * from threads;
-
--- insert into posts(
---     author,
---     message,
---     forum,
---     thread
--- )
--- values(
---     (select nickname from users where nickname = 'George1'),
---     'FIRST POST!!!',
---     (select slug from forums where slug = 'forum1'),
---     (select id from threads where title = 'Thread1')
--- );
-
--- select * from posts;
-
--- \q
