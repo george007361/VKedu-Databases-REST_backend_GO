@@ -18,18 +18,15 @@ func NewForumPostgres(db *sqlx.DB) *ForumPostgres {
 	return &ForumPostgres{db: db}
 }
 
+var (
+	queryCreateForum       = fmt.Sprintf(`INSERT INTO %s (slug, title, author_nickname) VALUES ($1, $2, $3) RETURNING slug, title, author_nickname, posts, threads`, forumTable)
+	querySelectForumBySlug = fmt.Sprintf(`SELECT slug, title, author_nickname, posts, threads FROM %s WHERE slug=$1`, forumTable)
+)
+
 func (r *ForumPostgres) CreateForum(newForumData models.Forum) (models.Forum, models.Error) {
-
-	userQuery := fmt.Sprintf(`select nickname from %s where nickname=$1;`, userTable)
-	err := r.db.DB.QueryRow(userQuery, newForumData.AuthorNickname).Scan(&newForumData.AuthorNickname)
-	if err != nil {
-		return models.Forum{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`User with nickname "%s" not found`, newForumData.AuthorNickname)}
-	}
-
-	forumQuery := fmt.Sprintf(`insert into %s (slug, title, author_nickname)	values ($1, $2, $3) returning slug, title, author_nickname, posts, threads`, forumTable)
 	var forumData models.Forum
 
-	err = r.db.DB.QueryRow(forumQuery, newForumData.Slug, newForumData.Title, newForumData.AuthorNickname).Scan(&forumData.Slug, &forumData.Title, &forumData.AuthorNickname, &forumData.Posts, &forumData.Threads)
+	err := r.db.DB.QueryRow(queryCreateForum, newForumData.Slug, newForumData.Title, newForumData.AuthorNickname).Scan(&forumData.Slug, &forumData.Title, &forumData.AuthorNickname, &forumData.Posts, &forumData.Threads)
 	logrus.Println(err)
 
 	if err != nil && err != sql.ErrNoRows { // если такой форум уже еcть
@@ -40,11 +37,9 @@ func (r *ForumPostgres) CreateForum(newForumData models.Forum) (models.Forum, mo
 }
 
 func (r *ForumPostgres) GetForumData(slug string) (models.Forum, models.Error) {
-	query := fmt.Sprintf(`select slug, title, author_nickname, posts, threads from %s where slug=$1`, forumTable)
-
 	var forumData models.Forum
 
-	err := r.db.DB.QueryRow(query, slug).Scan(&forumData.Slug, &forumData.Title, &forumData.AuthorNickname, &forumData.Posts, &forumData.Threads)
+	err := r.db.DB.QueryRow(querySelectForumBySlug, slug).Scan(&forumData.Slug, &forumData.Title, &forumData.AuthorNickname, &forumData.Posts, &forumData.Threads)
 
 	if err != nil && err == sql.ErrNoRows {
 		return models.Forum{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`Forum with slug "%s" not found`, slug)}
@@ -58,13 +53,6 @@ func (r *ForumPostgres) GetForumData(slug string) (models.Forum, models.Error) {
 }
 
 func (r *ForumPostgres) GetForumUsers(params models.ForumUsersQueryParams) ([]models.User, models.Error) {
-	logrus.Printf("%v\n", params)
-	checkQuery := fmt.Sprintf(`select slug from %s where slug=$1;`, forumTable)
-	err := r.db.DB.QueryRow(checkQuery, params.Slug).Scan(&params.Slug)
-	if err != nil && err == sql.ErrNoRows {
-		return []models.User{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`Forum with slug "%s" not found`, params.Slug)}
-	}
-
 	var queryParams []interface{}
 	queryParams = append(queryParams, params.Slug, params.Limit)
 	whereStatementStr := ""
@@ -115,13 +103,6 @@ func (r *ForumPostgres) GetForumUsers(params models.ForumUsersQueryParams) ([]mo
 }
 
 func (r *ForumPostgres) GetForumThreads(params models.ForumThreadsQueryParams) ([]models.Thread, models.Error) {
-
-	checkQuery := fmt.Sprintf(`select slug from %s where slug=$1;`, forumTable)
-	err := r.db.DB.QueryRow(checkQuery, params.Slug).Scan(&params.Slug)
-	if err != nil && err == sql.ErrNoRows {
-		return []models.Thread{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`Forum with slug "%s" not found`, params.Slug)}
-	}
-
 	var queryParams []interface{}
 	queryParams = append(queryParams, params.Slug, params.Limit)
 	whereStatementStr := ""

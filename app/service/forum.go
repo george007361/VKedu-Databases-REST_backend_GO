@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/george007361/db-course-proj/app/models"
@@ -8,34 +9,62 @@ import (
 )
 
 type ForumService struct {
-	repo repository.Forum
+	forumRepo repository.Forum
+	userRepo  repository.User
 }
 
-func NewForumService(repo repository.Forum) *ForumService {
-	return &ForumService{repo: repo}
+func NewForumService(forumRepo repository.Forum, userRepo repository.User) *ForumService {
+	return &ForumService{
+		forumRepo: forumRepo,
+		userRepo:  userRepo,
+	}
 }
 
 func (s *ForumService) CreateForum(newForumData models.Forum) (models.Forum, models.Error) {
-	forumData, errCreate := s.repo.CreateForum(newForumData)
+
+	// Check user
+	userData, err := s.userRepo.GetUserProfile(newForumData.AuthorNickname)
+	if err.Code != http.StatusOK {
+		return models.Forum{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`User with nickname "%s" not found`, newForumData.AuthorNickname)}
+	}
+	newForumData.AuthorNickname = userData.Nickname
+
+	// Try to create
+	forumData, errCreate := s.forumRepo.CreateForum(newForumData)
 	if errCreate.Code != http.StatusConflict {
 		return forumData, errCreate
 	}
 
-	forumData, errGet := s.repo.GetForumData(newForumData.Slug)
+	// Get existing forum data
+	forumData, errGet := s.forumRepo.GetForumData(newForumData.Slug)
 	if errGet.Code != http.StatusOK {
-		return forumData, errGet
+		return models.Forum{}, errGet
 	}
+
 	return forumData, errCreate
 }
 
 func (s *ForumService) GetForumData(slug string) (models.Forum, models.Error) {
-	return s.repo.GetForumData(slug)
+	return s.forumRepo.GetForumData(slug)
 }
 
 func (s *ForumService) GetForumUsers(params models.ForumUsersQueryParams) ([]models.User, models.Error) {
-	return s.repo.GetForumUsers(params)
+
+	// Check forum exists
+	_, err := s.forumRepo.GetForumData(params.Slug)
+	if err.Code != http.StatusOK {
+		return []models.User{}, err
+	}
+
+	return s.forumRepo.GetForumUsers(params)
 }
 
 func (s *ForumService) GetForumThreads(params models.ForumThreadsQueryParams) ([]models.Thread, models.Error) {
-	return s.repo.GetForumThreads(params)
+	// Check forum exists
+	_, err := s.forumRepo.GetForumData(params.Slug)
+	if err.Code != http.StatusOK {
+		return []models.Thread{}, err
+	}
+
+	return s.forumRepo.GetForumThreads(params)
 }

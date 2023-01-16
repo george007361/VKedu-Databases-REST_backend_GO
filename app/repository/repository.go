@@ -24,19 +24,14 @@ type Thread interface {
 	CreateThread(newThreadData models.Thread) (models.Thread, models.Error)
 	GetThreadData(slug string) (models.Thread, models.Error)
 	GetThreadDataById(id int) (models.Thread, models.Error)
-	// CreatePostsByThreadSlug(newPostsData []models.Post, slug string) ([]models.Post, models.Error)
-	// CreatePostsByThreadId(newPostsData []models.Post, id int) ([]models.Post, models.Error)
 	UpdateThreadBySlug(newData models.UpdateThread, slug string) (models.Thread, models.Error)
 	UpdateThreadById(newData models.UpdateThread, id int) (models.Thread, models.Error)
-	GetThreadPostsBySlug(params models.ThreadGetPostsParams, slug string) ([]models.Post, models.Error)
-	GetThreadPostsById(params models.ThreadGetPostsParams, id int) ([]models.Post, models.Error)
-	VoteThreadBySlug(vote models.Vote, slug string) (models.Thread, models.Error)
-	VoteThreadById(vote models.Vote, id int) (models.Thread, models.Error)
-	//
-	CreatePosts(newPostsData []models.Post, threadId int, forumSlug string) ([]models.Post, models.Error)
+	VoteThread(vote models.Vote, id int) (models.Thread, models.Error)
 }
 
 type Post interface {
+	CreatePosts(newPostsData []*models.Post, threadId int, forumSlug string) ([]*models.Post, models.Error)
+	GetPosts(params models.ThreadGetPostsParams, thread_id int) ([]*models.Post, models.Error)
 	GetPostData(id int) (models.Post, models.Error)
 	UpdatePostData(newData models.PostUpdate, id int) (models.Post, models.Error)
 }

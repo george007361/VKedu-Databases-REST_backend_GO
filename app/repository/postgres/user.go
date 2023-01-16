@@ -13,14 +13,25 @@ type UserPostgres struct {
 	db *sqlx.DB
 }
 
+var (
+	queryCreateUser                  = fmt.Sprintf(`INSERT INTO %s (nickname, fullname, about, email) VALUES($1, $2, $3, $4);`, userTable)
+	querySelectUserByEmailOrNickname = fmt.Sprintf(`SELECT nickname, fullname, about, email FROM %s WHERE email = $1 OR nickname = $2;`, userTable)
+	querySelectUserByNickname        = fmt.Sprintf(`SELECT nickname, fullname, about, email FROM %s WHERE nickname = $1;`, userTable)
+	queryUpdateUser                  = fmt.Sprintf(`UPDATE %s SET 
+													fullname=coalesce(nullif($1, ''), fullname),
+													about=coalesce(nullif($2, ''), about),
+													email=coalesce(nullif($3, ''), email)
+													WHERE nickname=$4
+													RETURNING fullname, about, email, nickname;`, userTable)
+)
+
 func NewUserPostgres(db *sqlx.DB) *UserPostgres {
 	return &UserPostgres{db: db}
 }
 
 func (r *UserPostgres) CreateUser(newUserData models.UserCreate) models.Error {
-	query := fmt.Sprintf(`insert into %s (nickname, fullname, about, email) values($1, $2, $3, $4);`, userTable)
 
-	_, err := r.db.DB.Exec(query, newUserData.Nickname, newUserData.FullName, newUserData.About, newUserData.Email)
+	_, err := r.db.DB.Exec(queryCreateUser, newUserData.Nickname, newUserData.FullName, newUserData.About, newUserData.Email)
 	if err != nil {
 		return models.Error{Code: http.StatusConflict, Message: err.Error()}
 	}
@@ -29,9 +40,8 @@ func (r *UserPostgres) CreateUser(newUserData models.UserCreate) models.Error {
 }
 
 func (r *UserPostgres) GetUserProfilesByEmailOrNickname(email string, nickname string) ([]*models.User, models.Error) {
-	query := fmt.Sprintf(`select nickname, fullname, about, email from %s where email = $1 or nickname = $2;`, userTable)
 
-	rows, err := r.db.DB.Query(query, email, nickname)
+	rows, err := r.db.DB.Query(querySelectUserByEmailOrNickname, email, nickname)
 	if err != nil {
 		return nil, models.Error{Code: http.StatusInternalServerError, Message: err.Error()}
 	}
@@ -56,10 +66,13 @@ func (r *UserPostgres) GetUserProfilesByEmailOrNickname(email string, nickname s
 }
 
 func (r *UserPostgres) GetUserProfile(nickname string) (models.User, models.Error) {
-	query := fmt.Sprintf(`select nickname, fullname, about, email from %s where nickname = $1 limit 1;`, userTable)
 	var userData models.User
 
-	err := r.db.DB.QueryRow(query, nickname).Scan(&userData.Nickname, &userData.FullName, &userData.About, &userData.Email)
+	err := r.db.DB.QueryRow(querySelectUserByNickname, nickname).Scan(
+		&userData.Nickname,
+		&userData.FullName,
+		&userData.About,
+		&userData.Email)
 
 	if err == sql.ErrNoRows {
 		return models.User{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`User with nickname "%s" not found`, nickname)}
@@ -75,15 +88,7 @@ func (r *UserPostgres) GetUserProfile(nickname string) (models.User, models.Erro
 func (r *UserPostgres) UpdateUserProfile(updatedData models.UserUpdate) (models.User, models.Error) {
 	var userUpdatedData models.User
 
-	query := fmt.Sprintf(`
-	update %s set 
-	fullname=coalesce(nullif($1, ''), fullname),
-	about=coalesce(nullif($2, ''), about),
-	email=coalesce(nullif($3, ''), email)
-	where nickname=$4
-	returning fullname, about, email, nickname`, userTable)
-
-	err := r.db.DB.QueryRow(query, updatedData.FullName, updatedData.About, updatedData.Email, updatedData.Nickname).Scan(&userUpdatedData.FullName, &userUpdatedData.About, &userUpdatedData.Email, &userUpdatedData.Nickname)
+	err := r.db.DB.QueryRow(queryUpdateUser, updatedData.FullName, updatedData.About, updatedData.Email, updatedData.Nickname).Scan(&userUpdatedData.FullName, &userUpdatedData.About, &userUpdatedData.Email, &userUpdatedData.Nickname)
 
 	if err == sql.ErrNoRows {
 		return models.User{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`User with nickname "%s" not found`, updatedData.Nickname)}

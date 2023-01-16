@@ -41,10 +41,10 @@ func (h *Handler) InitRoutes() *gin.Engine {
 
 		thread := api.Group("/thread/:slug_or_id")
 		{
-			thread.POST("/create", h.threadCreatePosts)
+			thread.POST("/create", h.createPostsInThread)
 			thread.GET("/details", h.threadGetData)
 			thread.POST("/details", h.threadUpdateData)
-			thread.GET("/posts", h.threadGetPosts)
+			thread.GET("/posts", h.getPostsInThread)
 			thread.POST("/vote", h.threadVote)
 		}
 

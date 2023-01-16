@@ -12,13 +12,16 @@ type ManagmentPostgres struct {
 	db *sqlx.DB
 }
 
+var (
+	queryClearDB = fmt.Sprintf("TRUNCATE %s, %s, %s, %s, %s CASCADE", userTable, forumTable, threadTable, voteTable, forumUsersTable)
+)
+
 func NewManagmentPostgres(db *sqlx.DB) *ManagmentPostgres {
 	return &ManagmentPostgres{db: db}
 }
 
 func (r *ManagmentPostgres) Clear() models.Error {
-	query := fmt.Sprintf("truncate %s, %s, %s, %s, %s cascade", userTable, forumTable, threadTable, voteTable, forumUsersTable)
-	_, err := r.db.DB.Exec(query)
+	_, err := r.db.DB.Exec(queryClearDB)
 
 	if err != nil {
 		return models.Error{Code: http.StatusInternalServerError, Message: err.Error()}
