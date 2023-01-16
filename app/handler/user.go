@@ -14,7 +14,7 @@ func (h *Handler) userCreate(c *gin.Context) {
 
 	nickname, isExist := c.Params.Get("nickname")
 	if !isExist {
-		helpers.NewErrorResponse(c, http.StatusBadRequest, "No nickname in URL") //"No nickname in URL"
+		helpers.NewErrorResponse(c, http.StatusBadRequest, "No nickname in URL")
 		return
 	}
 

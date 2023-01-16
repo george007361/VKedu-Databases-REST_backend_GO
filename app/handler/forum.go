@@ -51,8 +51,6 @@ func (h *Handler) forumGetUsers(c *gin.Context) {
 
 	logrus.Println("Handle get forum users")
 
-	// limit=100&since=george&desc=false
-
 	slug, isExist := c.Params.Get("slug")
 	if !isExist {
 		helpers.NewErrorResponse(c, http.StatusBadRequest, "No slug in URL")

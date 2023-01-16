@@ -135,15 +135,6 @@ func (h *Handler) getPostsInThread(c *gin.Context) {
 	sort := "flat"
 	if isExist {
 		sort = sortStr
-		// switch sortStr {
-		// case "flat":
-		// case "tree":
-		// case "parent_tree":
-		// 	sort = sortStr
-		// default:
-		// 	helpers.NewErrorResponse(c, http.StatusBadRequest, "Invalig query param desc")
-		// 	return
-		// }
 	}
 
 	queryParams := models.ThreadGetPostsParams{
@@ -195,7 +186,6 @@ func (h *Handler) createPostsInThread(c *gin.Context) {
 
 	id, err := strconv.Atoi(slugOrId)
 
-	// var postsData []*models.Post
 	var errr models.Error
 
 	if err != nil {
