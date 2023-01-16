@@ -175,21 +175,22 @@ AFTER UPDATE ON votes FOR EACH ROW EXECUTE PROCEDURE func_update_thread_votes_af
 
 
 -- Индексы
-CREATE INDEX IF NOT EXISTS index_forums_user_nickname ON forums (author_nickname);
+CREATE INDEX IF NOT EXISTS index_users_nickname ON users USING HASH(nickname);
+CREATE INDEX IF NOT EXISTS index_users_email ON users USING HASH(email);
+CREATE INDEX IF NOT EXISTS index_users_email_nickname ON users (email, nickname);
 
-CREATE INDEX IF NOT EXISTS index_threads_author ON threads (author_nickname);
-CREATE INDEX IF NOT EXISTS index_threads_forum ON threads (forum_slug);
-CREATE INDEX IF NOT EXISTS index_threads_slug ON threads (slug);
+CREATE INDEX IF NOT EXISTS index_forums_slug ON forums USING HASH(slug);
+
+CREATE INDEX IF NOT EXISTS index_forum_users_forum_user_nickname ON forum_users (forum_slug, nickname);
+
+CREATE INDEX IF NOT EXISTS index_threads_slug ON threads USING HASH(slug);
 CREATE INDEX IF NOT EXISTS index_threads_forum_CREATEd ON threads (forum_slug, created);
 
-CREATE INDEX IF NOT EXISTS index_forum_user_forum_user_nickname ON forum_users (forum_slug, nickname);
-
 CREATE INDEX IF NOT EXISTS index_posts_thread_id ON posts (thread_id, id);
+CREATE INDEX IF NOT EXISTS index_posts_path_tree ON posts (path_tree);
 CREATE INDEX IF NOT EXISTS index_posts_thread_post_tree ON posts (thread_id, path_tree);
 CREATE INDEX IF NOT EXISTS index_posts_parent_thread_id ON posts (parent_id, thread_id, id);
 CREATE INDEX IF NOT EXISTS index_posts_post_tree_one_post_tree ON posts ((path_tree[1]), path_tree);
 
-CREATE INDEX IF NOT EXISTS index_users_email ON users (email);
-CREATE INDEX IF NOT EXISTS index_users_email_nickname ON users (email, nickname);
 
 VACUUM ANALYZE;

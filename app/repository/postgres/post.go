@@ -21,7 +21,6 @@ var (
 										SET message=$1, isedited=true 
 										WHERE id=$2 
 										RETURNING id, parent_id, author_nickname, message, isedited, forum_slug, thread_id, created;`, postTable)
-	querySelectPostIdThreadIdByID = fmt.Sprintf(`SELECT id, thread_id FROM %s WHERE id=$1;`, postTable)
 )
 
 func NewPostPostgres(db *sqlx.DB) *PostPostgres {
@@ -204,9 +203,9 @@ func (r *PostPostgres) CreatePosts(newPostsData []*models.Post, threadId int, fo
 	valuesString := ""
 	valuesQueryParams := make([]interface{}, 0)
 	cntQParams := 1
-	for idx, _ := range newPostsData {
+	for _, post := range newPostsData {
 		valuesString += fmt.Sprintf(`($%d, $%d, $%d, $%d, $%d, $%d),`, cntQParams, cntQParams+1, cntQParams+2, cntQParams+3, cntQParams+4, cntQParams+5)
-		valuesQueryParams = append(valuesQueryParams, newPostsData[idx].ThreadId, newPostsData[idx].AuthorNickname, newPostsData[idx].ForumSlug, newPostsData[idx].Message, newPostsData[idx].ParentID, newPostsData[idx].Created)
+		valuesQueryParams = append(valuesQueryParams, post.ThreadId, post.AuthorNickname, post.ForumSlug, post.Message, post.ParentID, post.Created)
 		cntQParams += 6
 	}
 	// Trim last ','
