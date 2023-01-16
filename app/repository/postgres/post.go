@@ -26,12 +26,12 @@ func (r *PostPostgres) GetPostData(id int) (models.Post, models.Error) {
 
 	err := r.db.DB.QueryRow(query, id).Scan(
 		&postData.ID,
-		&postData.Parent,
-		&postData.Author,
+		&postData.ParentID,
+		&postData.AuthorNickname,
 		&postData.Message,
 		&postData.IsEdited,
-		&postData.Forum,
-		&postData.Thread,
+		&postData.ForumSlug,
+		&postData.ThreadId,
 		&postData.Created)
 
 	if err != nil && err == sql.ErrNoRows {
@@ -54,12 +54,12 @@ func (r *PostPostgres) UpdatePostData(newData models.PostUpdate, id int) (models
 	var postData models.Post
 	err := r.db.DB.QueryRow(query, newData.Message, id).Scan(
 		&postData.ID,
-		&postData.Parent,
-		&postData.Author,
+		&postData.ParentID,
+		&postData.AuthorNickname,
 		&postData.Message,
 		&postData.IsEdited,
-		&postData.Forum,
-		&postData.Thread,
+		&postData.ForumSlug,
+		&postData.ThreadId,
 		&postData.Created)
 
 	if err == sql.ErrNoRows {

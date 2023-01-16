@@ -21,15 +21,15 @@ func NewForumPostgres(db *sqlx.DB) *ForumPostgres {
 func (r *ForumPostgres) CreateForum(newForumData models.Forum) (models.Forum, models.Error) {
 
 	userQuery := fmt.Sprintf(`select nickname from %s where nickname=$1;`, userTable)
-	err := r.db.DB.QueryRow(userQuery, newForumData.User).Scan(&newForumData.User)
+	err := r.db.DB.QueryRow(userQuery, newForumData.AuthorNickname).Scan(&newForumData.AuthorNickname)
 	if err != nil {
-		return models.Forum{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`User with nickname "%s" not found`, newForumData.User)}
+		return models.Forum{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`User with nickname "%s" not found`, newForumData.AuthorNickname)}
 	}
 
 	forumQuery := fmt.Sprintf(`insert into %s (slug, title, author_nickname)	values ($1, $2, $3) returning slug, title, author_nickname, posts, threads`, forumTable)
 	var forumData models.Forum
 
-	err = r.db.DB.QueryRow(forumQuery, newForumData.Slug, newForumData.Title, newForumData.User).Scan(&forumData.Slug, &forumData.Title, &forumData.User, &forumData.Posts, &forumData.Threads)
+	err = r.db.DB.QueryRow(forumQuery, newForumData.Slug, newForumData.Title, newForumData.AuthorNickname).Scan(&forumData.Slug, &forumData.Title, &forumData.AuthorNickname, &forumData.Posts, &forumData.Threads)
 	logrus.Println(err)
 
 	if err != nil && err != sql.ErrNoRows { // если такой форум уже еcть
@@ -44,7 +44,7 @@ func (r *ForumPostgres) GetForumData(slug string) (models.Forum, models.Error) {
 
 	var forumData models.Forum
 
-	err := r.db.DB.QueryRow(query, slug).Scan(&forumData.Slug, &forumData.Title, &forumData.User, &forumData.Posts, &forumData.Threads)
+	err := r.db.DB.QueryRow(query, slug).Scan(&forumData.Slug, &forumData.Title, &forumData.AuthorNickname, &forumData.Posts, &forumData.Threads)
 
 	if err != nil && err == sql.ErrNoRows {
 		return models.Forum{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`Forum with slug "%s" not found`, slug)}
@@ -160,8 +160,8 @@ func (r *ForumPostgres) GetForumThreads(params models.ForumThreadsQueryParams) (
 		err = rows.Scan(
 			&thread.ID,
 			&threadSlug,
-			&thread.Forum,
-			&thread.Author,
+			&thread.ForumSlug,
+			&thread.AuthorNickname,
 			&thread.Title,
 			&thread.Message,
 			&thread.Votes,

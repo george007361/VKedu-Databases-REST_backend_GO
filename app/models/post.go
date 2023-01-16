@@ -2,19 +2,19 @@ package models
 
 import "time"
 
-type Post struct { //  Сообщение внутри ветки обсуждения на форуме.
-	Author   string    `json:"author" binding:"required"`  // Автор, написавший данное сообщение.
-	Created  time.Time `json:"created"`                    // Дата создания сообщения на форуме.
-	Forum    string    `json:"forum"`                      // Идентификатор форума (slug) данного сообещния.
-	ID       int       `json:"id"`                         // Идентификатор данного сообщения.
-	Message  string    `json:"message" binding:"required"` // Собственно сообщение форума.
-	Parent   int       `json:"parent"`                     // Идентификатор родительского сообщения (0 - корневое сообщение обсуждения).
-	IsEdited bool      `json:"isEdited"`                   // Истина, если данное сообщение было изменено.
-	Thread   int       `json:"thread"`                     // Идентификатор форума (slug) данного сообещния.
+type Post struct {
+	AuthorNickname string    `json:"author" binding:"required"`
+	Created        time.Time `json:"created"`
+	ForumSlug      string    `json:"forum"`
+	ID             int       `json:"id"`
+	Message        string    `json:"message" binding:"required"`
+	ParentID       int       `json:"parent"`
+	IsEdited       bool      `json:"isEdited"`
+	ThreadId       int       `json:"thread"`
 }
 
 type PostUpdate struct {
-	Message string `json:"message"` // Собственно сообщение форума.
+	Message string `json:"message"`
 }
 
 type PostAllData struct {

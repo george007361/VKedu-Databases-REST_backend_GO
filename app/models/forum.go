@@ -1,11 +1,11 @@
 package models
 
 type Forum struct {
-	Slug    string `json:"slug" binding:"required"`  // Человекопонятный URL
-	Title   string `json:"title" binding:"required"` // Название форума
-	User    string `json:"user" binding:"required"`  // Nickname пользователя, который отвечает за форум
-	Posts   int    `json:"posts"`                    // Общее кол-во сообщений в данном форуме
-	Threads int    `json:"threads"`                  // Общее кол-во ветвей обсуждения в данном форуме
+	Slug           string `json:"slug" binding:"required"`
+	Title          string `json:"title" binding:"required"`
+	AuthorNickname string `json:"user" binding:"required"`
+	Posts          int    `json:"posts"`
+	Threads        int    `json:"threads"`
 }
 
 type ForumUsersQueryParams struct {

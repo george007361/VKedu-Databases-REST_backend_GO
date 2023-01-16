@@ -3,30 +3,30 @@ package models
 import "time"
 
 type Thread struct {
-	Author  string    `json:"author" binding:"required"`  // Пользователь, создавший данную тему.
-	Created time.Time `json:"created" `                   // Дата создания ветки на форуме.
-	Forum   string    `json:"forum"`                      // Форум, в котором расположена данная ветка обсуждения.
-	ID      int       `json:"id"`                         // Идентификатор ветки обсуждения.
-	Message string    `json:"message" binding:"required"` // Описание ветки обсуждения.
-	Title   string    `json:"title" binding:"required"`   // Заголовок ветки обсуждения.
-	Slug    string    `json:"slug"`                       // Человекопонятный URL
-	Votes   int       `json:"votes"`                      // Кол-во голосов непосредственно за данное сообщение форума.
+	AuthorNickname string    `json:"author" binding:"required"`
+	Created        time.Time `json:"created" `
+	ForumSlug      string    `json:"forum"`
+	ID             int       `json:"id"`
+	Message        string    `json:"message" binding:"required"`
+	Title          string    `json:"title" binding:"required"`
+	Slug           string    `json:"slug"`
+	Votes          int       `json:"votes"`
 }
 
 type CreateThread struct {
-	Author  string `json:"author" binding:"required"`  // Пользователь, создавший данную тему.
-	Message string `json:"message" binding:"required"` // Описание ветки обсуждения.
-	Title   string `json:"title" binding:"required"`   // Заголовок ветки обсуждения.
+	AuthorNickname string `json:"author" binding:"required"`
+	Message        string `json:"message" binding:"required"`
+	Title          string `json:"title" binding:"required"`
 }
 
 type UpdateThread struct {
-	Message string `json:"message"` // Описание ветки обсуждения.
-	Title   string `json:"title"`   // Заголовок ветки обсуждения.
+	Message string `json:"message"`
+	Title   string `json:"title"`
 }
 
 type Vote struct {
-	Nickname string `json:"nickname"` // Идентификатор пользователя.
-	Voice    int32  `json:"voice"`    // Отданный голос.
+	Nickname string `json:"nickname"`
+	Voice    int32  `json:"voice"`
 }
 
 type ThreadGetPostsParams struct {

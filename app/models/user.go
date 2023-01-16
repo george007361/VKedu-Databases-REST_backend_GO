@@ -1,22 +1,22 @@
 package models
 
 type User struct {
-	Email    string `json:"email" binding:"required"`    // Почтовый адрес пользователя (уникальное поле)
-	FullName string `json:"fullname" binding:"required"` // Полное имя пользователя
-	Nickname string `json:"nickname" binding:"required"` //Имя пользователя (уникальное поле)
-	About    string `json:"about" binding:"required"`    // Описание пользователя
+	Email    string `json:"email" binding:"required"`
+	FullName string `json:"fullname" binding:"required"`
+	Nickname string `json:"nickname" binding:"required"`
+	About    string `json:"about" binding:"required"`
 }
 
 type UserCreate struct {
-	Email    string `json:"email" binding:"required"`    // Почтовый адрес пользователя (уникальное поле)
-	FullName string `json:"fullname" binding:"required"` // Полное имя пользователя
-	Nickname string `json:"nickname" binding:"required"` //Имя пользователя (уникальное поле)
-	About    string `json:"about" binding:"required"`    // Описание пользователя
+	Email    string `json:"email" binding:"required"`
+	FullName string `json:"fullname" binding:"required"`
+	Nickname string `json:"nickname" binding:"required"`
+	About    string `json:"about" binding:"required"`
 }
 
 type UserUpdate struct {
-	Email    string `json:"email"`    // Почтовый адрес пользователя (уникальное поле)
-	FullName string `json:"fullname"` // Полное имя пользователя
-	Nickname string `json:"nickname"` //Имя пользователя (уникальное поле)
-	About    string `json:"about"`    // Описание пользователя
+	Email    string `json:"email"`
+	FullName string `json:"fullname"`
+	Nickname string `json:"nickname"`
+	About    string `json:"about"`
 }

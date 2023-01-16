@@ -33,21 +33,21 @@ func (h *Handler) postGetData(c *gin.Context) {
 	for _, item := range related {
 		switch item {
 		case "user":
-			userData, err := h.services.User.GetUserProfile(postData.Author)
+			userData, err := h.services.User.GetUserProfile(postData.AuthorNickname)
 			if err.Code != http.StatusOK {
 				helpers.NewErrorResponse(c, err.Code, err.Message)
 				return
 			}
 			postAllData.Author = &userData
 		case "forum":
-			forumData, err := h.services.Forum.GetForumData(postData.Forum)
+			forumData, err := h.services.Forum.GetForumData(postData.ForumSlug)
 			if err.Code != http.StatusOK {
 				helpers.NewErrorResponse(c, err.Code, err.Message)
 				return
 			}
 			postAllData.Forum = &forumData
 		case "thread":
-			threadData, err := h.services.Thread.GetThreadDataById(postData.Thread)
+			threadData, err := h.services.Thread.GetThreadDataById(postData.ThreadId)
 			if err.Code != http.StatusOK {
 				helpers.NewErrorResponse(c, err.Code, err.Message)
 				return

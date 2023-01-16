@@ -42,7 +42,7 @@ func (s *ThreadService) CreatePostsByThreadSlug(newPostsData []models.Post, slug
 		return []models.Post{}, models.Error{Code: http.StatusCreated}
 	}
 
-	return s.repo.CreatePosts(newPostsData, threadData.ID, threadData.Forum)
+	return s.repo.CreatePosts(newPostsData, threadData.ID, threadData.ForumSlug)
 }
 
 func (s *ThreadService) CreatePostsByThreadId(newPostsData []models.Post, id int) ([]models.Post, models.Error) {
@@ -62,7 +62,7 @@ func (s *ThreadService) CreatePostsByThreadId(newPostsData []models.Post, id int
 		return []models.Post{}, models.Error{Code: http.StatusCreated}
 	}
 
-	return s.repo.CreatePosts(newPostsData, threadData.ID, threadData.Forum)
+	return s.repo.CreatePosts(newPostsData, threadData.ID, threadData.ForumSlug)
 }
 
 func (s *ThreadService) UpdateThreadBySlug(newData models.UpdateThread, slug string) (models.Thread, models.Error) {

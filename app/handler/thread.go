@@ -246,7 +246,7 @@ func (h *Handler) createThread(c *gin.Context) {
 	}
 
 	var newThreadData models.Thread
-	newThreadData.Forum = slug
+	newThreadData.ForumSlug = slug
 
 	if err := c.BindJSON(&newThreadData); err != nil {
 		helpers.NewErrorResponse(c, http.StatusBadRequest, "Invalid JSON: "+err.Error())

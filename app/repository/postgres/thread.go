@@ -30,8 +30,8 @@ func (r *ThreadPostgres) GetThreadData(slug string) (models.Thread, models.Error
 		&threadData.Created,
 		&threadData.Votes,
 		&threadData.Title,
-		&threadData.Author,
-		&threadData.Forum,
+		&threadData.AuthorNickname,
+		&threadData.ForumSlug,
 		&threadData.Message,
 		&threadSlug)
 	if threadSlug != nil {
@@ -62,8 +62,8 @@ func (r *ThreadPostgres) GetThreadDataById(id int) (models.Thread, models.Error)
 		&threadData.Created,
 		&threadData.Votes,
 		&threadData.Title,
-		&threadData.Author,
-		&threadData.Forum,
+		&threadData.AuthorNickname,
+		&threadData.ForumSlug,
 		&threadData.Message,
 		&threadSlug)
 	if threadSlug != nil {
@@ -89,20 +89,20 @@ func (r *ThreadPostgres) CreatePosts(newPostsData []models.Post, threadId int, f
 	for _, post := range newPostsData {
 		// Check User exists
 		checkUserQuery := fmt.Sprintf(`select nickname from %s where nickname=$1;`, userTable)
-		err := r.db.DB.QueryRow(checkUserQuery, post.Author).Scan(&post.Author)
+		err := r.db.DB.QueryRow(checkUserQuery, post.AuthorNickname).Scan(&post.AuthorNickname)
 		if err != nil && err == sql.ErrNoRows {
-			return []models.Post{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`User with nickname "%s" not found`, post.Author)}
+			return []models.Post{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`User with nickname "%s" not found`, post.AuthorNickname)}
 		}
 
 		// Check parent exists and post thread eq parent thread
-		if post.Parent != 0 {
+		if post.ParentID != 0 {
 			checkParentQuery := fmt.Sprintf(`select id, thread_id from %s where id=$1;`, postTable)
 			var parentThread int
-			err = r.db.DB.QueryRow(checkParentQuery, post.Parent).Scan(&post.Parent, &parentThread)
+			err = r.db.DB.QueryRow(checkParentQuery, post.ParentID).Scan(&post.ParentID, &parentThread)
 
 			// 1
 			if err != nil && err == sql.ErrNoRows {
-				return []models.Post{}, models.Error{Code: http.StatusConflict, Message: fmt.Sprintf(`Cant create post with parent id="%d". Parent not found`, post.Parent)}
+				return []models.Post{}, models.Error{Code: http.StatusConflict, Message: fmt.Sprintf(`Cant create post with parent id="%d". Parent not found`, post.ParentID)}
 			}
 			// 2
 			if parentThread != threadId {
@@ -118,11 +118,11 @@ func (r *ThreadPostgres) CreatePosts(newPostsData []models.Post, threadId int, f
 	valuesQueryParams := make([]interface{}, 0)
 	cntQParams := 1
 	for idx, _ := range newPostsData {
-		newPostsData[idx].Thread = threadId
-		newPostsData[idx].Forum = forumSlug
+		newPostsData[idx].ThreadId = threadId
+		newPostsData[idx].ForumSlug = forumSlug
 		newPostsData[idx].Created = creationTime
 		valuesString += fmt.Sprintf(`($%d, $%d, $%d, $%d, $%d, $%d),`, cntQParams, cntQParams+1, cntQParams+2, cntQParams+3, cntQParams+4, cntQParams+5)
-		valuesQueryParams = append(valuesQueryParams, newPostsData[idx].Thread, newPostsData[idx].Author, newPostsData[idx].Forum, newPostsData[idx].Message, newPostsData[idx].Parent, newPostsData[idx].Created)
+		valuesQueryParams = append(valuesQueryParams, newPostsData[idx].ThreadId, newPostsData[idx].AuthorNickname, newPostsData[idx].ForumSlug, newPostsData[idx].Message, newPostsData[idx].ParentID, newPostsData[idx].Created)
 		cntQParams += 6
 	}
 	// Trim last ','
@@ -186,8 +186,8 @@ func (r *ThreadPostgres) updateThread(newData models.UpdateThread, wherePart str
 	err := r.db.DB.QueryRow(query, queryParams...).Scan(
 		&threadData.ID,
 		&threadData.Title,
-		&threadData.Author,
-		&threadData.Forum,
+		&threadData.AuthorNickname,
+		&threadData.ForumSlug,
 		&threadData.Message,
 		&threadData.Votes,
 		&threadData.Slug,
@@ -325,12 +325,12 @@ func (r *ThreadPostgres) getThreadPosts(params models.ThreadGetPostsParams, id i
 		post := models.Post{}
 		err = rows.Scan(
 			&post.ID,
-			&post.Parent,
-			&post.Author,
+			&post.ParentID,
+			&post.AuthorNickname,
 			&post.Message,
 			&post.IsEdited,
-			&post.Forum,
-			&post.Thread,
+			&post.ForumSlug,
+			&post.ThreadId,
 			&post.Created,
 		)
 		if err != nil {
@@ -383,15 +383,15 @@ func (r *ThreadPostgres) voteThread(vote models.Vote, id int) (models.Thread, mo
 func (r *ThreadPostgres) CreateThread(newThreadData models.Thread) (models.Thread, models.Error) {
 
 	userQuery := fmt.Sprintf(`select nickname from %s where nickname=$1;`, userTable)
-	err := r.db.DB.QueryRow(userQuery, newThreadData.Author).Scan(&newThreadData.Author)
+	err := r.db.DB.QueryRow(userQuery, newThreadData.AuthorNickname).Scan(&newThreadData.AuthorNickname)
 	if err != nil {
-		return models.Thread{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`User with nickname "%s" not found`, newThreadData.Author)}
+		return models.Thread{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`User with nickname "%s" not found`, newThreadData.AuthorNickname)}
 	}
 
 	forumQuery := fmt.Sprintf(`select slug from %s where slug=$1;`, forumTable)
-	err = r.db.DB.QueryRow(forumQuery, newThreadData.Forum).Scan(&newThreadData.Forum)
+	err = r.db.DB.QueryRow(forumQuery, newThreadData.ForumSlug).Scan(&newThreadData.ForumSlug)
 	if err != nil {
-		return models.Thread{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`Forum with slug "%s" not found`, newThreadData.Forum)}
+		return models.Thread{}, models.Error{Code: http.StatusNotFound, Message: fmt.Sprintf(`Forum with slug "%s" not found`, newThreadData.AuthorNickname)}
 	}
 
 	threadQuery := fmt.Sprintf(`
@@ -400,7 +400,7 @@ func (r *ThreadPostgres) CreateThread(newThreadData models.Thread) (models.Threa
 	values ($1,$2,$3,$4,nullif($5,''),$6) 
 	returning id, created, votes`, threadTable)
 
-	err = r.db.DB.QueryRow(threadQuery, newThreadData.Title, newThreadData.Author, newThreadData.Message, newThreadData.Forum, newThreadData.Slug, newThreadData.Created).Scan(&newThreadData.ID, &newThreadData.Created, &newThreadData.Votes)
+	err = r.db.DB.QueryRow(threadQuery, newThreadData.Title, newThreadData.AuthorNickname, newThreadData.Message, newThreadData.ForumSlug, newThreadData.Slug, newThreadData.Created).Scan(&newThreadData.ID, &newThreadData.Created, &newThreadData.Votes)
 
 	if err != nil { // если такой форум уже еть
 		fmt.Println(err)
